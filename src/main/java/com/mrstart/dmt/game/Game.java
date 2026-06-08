@@ -4,7 +4,6 @@ import com.mrstart.dmt.*;
 import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.task.*;
 import java.util.*;
-import me.confuser.barapi.BarAPI;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -95,7 +94,6 @@ public class Game
             inventories.remove(player);
             player.setDisplayName(player.getName());
             player.setGameMode((GameMode)gamemode.get(player));
-            BarAPI.removeBar(player);
             gamemode.remove(player);
             board.resetScores(player);
             player.setScoreboard(manager.getMainScoreboard());
@@ -138,7 +136,6 @@ public class Game
                     gamemode.put(player, player.getGameMode());
                     player.setGameMode(GameMode.ADVENTURE);
                     player.getInventory().clear();
-                    BarAPI.removeBar(player);
                     player.setMetadata("inbmt", new FixedMetadataValue(instance, getName()));
                     player.setScoreboard(board);
                     score.put(player, Integer.valueOf(0));
@@ -153,7 +150,7 @@ public class Game
                     }
                     if(players >= minplayers)
                     {
-                        setTimedBarForAll((new StringBuilder()).append(ChatColor.GOLD).append(ChatColor.BOLD).append("Game Starting").toString(), 10);
+                        sendMessage((new StringBuilder()).append(ChatColor.GOLD).append(ChatColor.BOLD).append("Game Starting in 10 seconds!").toString());
                         TaskStart start = new TaskStart(this);
                         start.runTaskLater(instance, 200L);
                         tasks.add(start);
@@ -261,15 +258,14 @@ public class Game
         started = false;
         buildzone.clear();
         buildzone.setWool(DyeColor.WHITE);
-        removeBarForAll();
         List toKick = new ArrayList();
         Player p;
         for(Iterator iterator = score.keySet().iterator(); iterator.hasNext(); toKick.add(p))
             p = (Player)iterator.next();
 
-        Player p;
-        for(Iterator iterator1 = toKick.iterator(); iterator1.hasNext(); leave(p))
-            p = (Player)iterator1.next();
+        Player kick;
+        for(Iterator iterator1 = toKick.iterator(); iterator1.hasNext(); leave(kick))
+            kick = (Player)iterator1.next();
 
     }
 
@@ -282,7 +278,6 @@ public class Game
             builder.teleport(spawn);
             builder.setDisplayName(builder.getName());
             builder.getInventory().clear();
-            BarAPI.removeBar(builder);
             builder = null;
         }
         for(int i = 0; i < buildPerPlayer; i++)
@@ -347,39 +342,14 @@ public class Game
         });
         p.setDisplayName((new StringBuilder()).append(ChatColor.RED).append("[BUILDER] ").append(p.getName()).toString());
         sendMessage((new StringBuilder()).append(ChatColor.GOLD).append(ChatColor.BOLD).append(p.getName()).append(" is the drawer this round!").toString());
-        setBarForAll((new StringBuilder()).append(ChatColor.YELLOW).append(ChatColor.BOLD).append("Guess ").append(ChatColor.WHITE).append(ChatColor.BOLD).append(wordf).toString());
-        BarAPI.setMessage(p, (new StringBuilder()).append(ChatColor.YELLOW).append("Your word is ").append(ChatColor.GOLD).append(ChatColor.BOLD).append(word).toString());
-        BarAPI.setHealth(p, 100F);
+        sendMessage((new StringBuilder()).append(ChatColor.YELLOW).append(ChatColor.BOLD).append("Guess ").append(ChatColor.WHITE).append(ChatColor.BOLD).append(wordf).toString());
+        ChatUtil.send(builder, (new StringBuilder()).append(ChatColor.YELLOW).append("Your word is ").append(ChatColor.GOLD).append(ChatColor.BOLD).append(word).toString());
     }
 
     public void sendMessage(String message)
     {
         Player p;
         for(Iterator iterator = score.keySet().iterator(); iterator.hasNext(); ChatUtil.send(p, message))
-            p = (Player)iterator.next();
-
-    }
-
-    public void setBarForAll(String message)
-    {
-        Player p;
-        for(Iterator iterator = score.keySet().iterator(); iterator.hasNext(); BarAPI.setMessage(p, message))
-            p = (Player)iterator.next();
-
-    }
-
-    public void setTimedBarForAll(String message, int seconds)
-    {
-        Player p;
-        for(Iterator iterator = score.keySet().iterator(); iterator.hasNext(); BarAPI.setMessage(p, message, seconds))
-            p = (Player)iterator.next();
-
-    }
-
-    public void removeBarForAll()
-    {
-        Player p;
-        for(Iterator iterator = score.keySet().iterator(); iterator.hasNext(); BarAPI.removeBar(p))
             p = (Player)iterator.next();
 
     }
@@ -478,9 +448,9 @@ public class Game
         Random r = new Random();
         int randomLetter = r.nextInt(word.length());
         wordf.setCharAt(randomLetter, word.charAt(randomLetter));
-        setBarForAll((new StringBuilder()).append(ChatColor.YELLOW).append(ChatColor.BOLD).append("Guess ").append(ChatColor.WHITE).append(ChatColor.BOLD).append(wordf).toString());
+        sendMessage((new StringBuilder()).append(ChatColor.YELLOW).append(ChatColor.BOLD).append("Guess ").append(ChatColor.WHITE).append(ChatColor.BOLD).append(wordf).toString());
         playSoundForAll(Sound.ITEM_PICKUP);
-        BarAPI.setMessage(builder, (new StringBuilder()).append(ChatColor.YELLOW).append("Your word is ").append(ChatColor.GOLD).append(ChatColor.BOLD).append(word).toString());
+        ChatUtil.send(builder, (new StringBuilder()).append(ChatColor.YELLOW).append("Your word is ").append(ChatColor.GOLD).append(ChatColor.BOLD).append(word).toString());
     }
 
     public void setMinPlayers(int i)

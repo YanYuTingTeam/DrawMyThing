@@ -2,6 +2,7 @@ package com.mrstart.dmt.game;
 
 import com.mrstart.dmt.ChatUtil;
 import com.mrstart.dmt.DrawMyThing;
+import java.util.HashSet;
 import java.util.List;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -58,7 +59,7 @@ public class GameListener
             return;
         if(event.getPlayer().getItemInHand().getType() == Material.STICK && event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getPlayer().isBlocking())
         {
-            Block b = event.getPlayer().getTargetBlock(null, 100);
+            Block b = event.getPlayer().getTargetBlock((HashSet<Byte>) null, 100);
             if(b.getType() != Material.WOOL)
                 return;
             b.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
@@ -70,7 +71,7 @@ public class GameListener
         {
             if(event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
                 return;
-            Block b = event.getPlayer().getTargetBlock(null, 100);
+            Block b = event.getPlayer().getTargetBlock((HashSet<Byte>) null, 100);
             if(b.getType() != Material.WOOL)
                 return;
             b.setTypeIdAndData(Material.WOOL.getId(), DyeColor.WHITE.getData(), true);
@@ -80,7 +81,7 @@ public class GameListener
         }
         if(event.getPlayer().getItemInHand().getType() == Material.BLAZE_ROD && event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
         {
-            Block b = event.getPlayer().getTargetBlock(null, 100);
+            Block b = event.getPlayer().getTargetBlock((HashSet<Byte>) null, 100);
             Block b1 = b.getLocation().add(1.0D, 0.0D, 0.0D).getBlock();
             Block b2 = b.getLocation().add(0.0D, 1.0D, 0.0D).getBlock();
             Block b3 = b.getLocation().subtract(1.0D, 0.0D, 0.0D).getBlock();

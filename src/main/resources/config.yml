@@ -1,0 +1,44 @@
+# ========================================
+# DrawMyThing Configuration
+# ========================================
+
+# Toggle pencil/eraser sound effects
+tool-sound: true
+
+# Word list for the drawing game
+words:
+  - motorbike
+  - noodle
+  - sea
+  - ocean
+  - leash
+  - pumpkin
+  - pyramid
+  - rainbow
+  - witch
+  - house
+  - santa
+  - flower
+  - pants
+  - donut
+  - snake
+  - snail
+  - yawn
+  - stamp
+  - horse
+  - apple
+  - goblin
+  - boat
+  - computer
+  - river
+  - cupcake
+  - football
+  - chocolate
+  - frog
+  - night
+  - creeper
+  - ship
+  - bow
+  - tree
+  - smile
+  - watch
