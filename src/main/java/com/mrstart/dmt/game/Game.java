@@ -92,9 +92,9 @@ public class Game {
         objectiveIndex++;
         Team t = board.registerNewTeam("t" + objectiveIndex);
         t.setPrefix(display);
-        t.setSuffix(invisible);
-        t.addEntry(display + invisible);
-        objective.getScore(display + invisible).setScore(scoreVal);
+        t.setSuffix("");
+        t.addEntry(invisible);
+        objective.getScore(invisible).setScore(scoreVal);
     }
 
     public String getName() { return name; }
