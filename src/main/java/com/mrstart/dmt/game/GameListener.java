@@ -295,6 +295,7 @@ public class GameListener implements Listener {
                 Block last = lastPaintedBlock.get(player);
                 if (last != null && !last.equals(b)) {
                     paintLine(last, b, data, zone, big, player);
+                    playPencilSound(player);
                 } else {
                     b.setTypeIdAndData(Material.WOOL.getId(), data, true);
                     if (big) {
@@ -478,4 +479,24 @@ public class GameListener implements Listener {
     public void setPencilColor(DyeColor color) { this.pencilColor = color; }
     public DyeColor getColor() { return pencilColor; }
     public void resetColor() { this.pencilColor = DyeColor.WHITE; }
+    
+    private void playPencilSound(Player player) {
+        if (!instance.getConfig().getBoolean("tool-sound", true)) return;
+        ItemStack hand = player.getItemInHand();
+        if (hand == null) return;
+        String configPath = isBigPencilItem(hand) ? "item.big-pencil" : "item.pencil";
+        Sound sound = Sound.FIZZ;
+        float volume = 1.0f;
+        float pitch = 1.0f;
+        String soundStr = instance.getConfig().getString(configPath + ".sound", null);
+        if (soundStr != null && !soundStr.isEmpty()) {
+            try {
+                String[] parts = soundStr.split(",");
+                sound = Sound.valueOf(parts[0].trim());
+                if (parts.length > 1) volume = Float.parseFloat(parts[1].trim());
+                if (parts.length > 2) pitch = Float.parseFloat(parts[2].trim());
+            } catch (Exception ignored) {}
+        }
+        player.playSound(player.getLocation(), sound, volume, pitch);
+    }
 }

@@ -192,6 +192,7 @@ public class DrawMyThing extends JavaPlugin {
                 int woolData = c.getInt("wool", 0);
                 String colorName = ChatUtil.colorize(c.getString("name", "&f颜色"));
                 int slot = c.getInt("slot", 0);
+                if (slot >= 10) slot += 1;
                 ItemStack item = new ItemStack(Material.WOOL, 1, (short) woolData);
                 ItemMeta meta = item.getItemMeta();
                 meta.setDisplayName(colorName);
