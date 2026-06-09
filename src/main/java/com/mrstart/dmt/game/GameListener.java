@@ -71,7 +71,22 @@ public class GameListener implements Listener {
 
     @EventHandler
     public void onPlayerPlaceBlock(BlockPlaceEvent event) {
-        if (isInGame(event.getPlayer())) event.setCancelled(true);
+        Player player = event.getPlayer();
+        if (!isInGame(player)) return;
+        event.setCancelled(true);
+        Game game = getGame(player);
+        if (game == null || !game.getBuilder().equals(player)) return;
+        ItemStack item = event.getItemInHand();
+        if (isEraserItem(item)) {
+            CuboidZone zone = game.getBuildZone();
+            if (zone != null) zone.setWool(DyeColor.WHITE);
+            cancelPaintTask(player);
+            playItemSound(game, player, "item.eraser", Sound.EXPLODE);
+        } else if (isColorPickerItem(item)) {
+            CuboidZone zone = game.getBuildZone();
+            if (zone != null) zone.setWool(pencilColor);
+            playItemSound(game, player, "item.color-picker", Sound.SPLASH);
+        }
     }
 
     @EventHandler
@@ -137,7 +152,7 @@ public class GameListener implements Listener {
             if (b.getType() != Material.WOOL) return;
             b.setTypeIdAndData(Material.WOOL.getId(), pencilColor.getData(), true);
             lastPaintedBlock.put(player, b);
-            playToolSound(player);
+            playItemSound(game, player, "item.pencil", Sound.FIZZ);
             startPaintTask(player, game, false);
             return;
         }
@@ -177,28 +192,23 @@ public class GameListener implements Listener {
             if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
             if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
             lastPaintedBlock.put(player, b);
-            playToolSound(player);
+            playItemSound(game, player, "item.big-pencil", Sound.FIZZ);
             startPaintTask(player, game, true);
             return;
         }
 
-        if (isEraserItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+        if (isEraserItem(item) && action == Action.RIGHT_CLICK_AIR) {
             CuboidZone zone = game.getBuildZone();
-            if (zone != null) {
-                zone.setWool(DyeColor.WHITE);
-            }
-            if (instance.getConfig().getBoolean("tool-sound", true)) {
-                player.playSound(player.getLocation(), Sound.BAT_TAKEOFF, 1.0f, 1.0f);
-            }
+            if (zone != null) zone.setWool(DyeColor.WHITE);
+            cancelPaintTask(player);
+            playItemSound(game, player, "item.eraser", Sound.EXPLODE);
             return;
         }
 
         if (isColorPickerItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             CuboidZone zone = game.getBuildZone();
-            if (zone != null) {
-                zone.setWool(pencilColor);
-            }
-            playToolSound(player);
+            if (zone != null) zone.setWool(pencilColor);
+            playItemSound(game, player, "item.color-picker", Sound.SPLASH);
             return;
         }
     }
@@ -414,7 +424,7 @@ public class GameListener implements Listener {
     private boolean isLeaveItem(ItemStack item) { return matchItem(item, "item.leave", Material.BED, (short) 14); }
     private boolean isPencilItem(ItemStack item) { return matchItem(item, "item.pencil", Material.STICK, (short) 0); }
     private boolean isBigPencilItem(ItemStack item) { return matchItem(item, "item.big-pencil", Material.BLAZE_ROD, (short) 0); }
-    private boolean isEraserItem(ItemStack item) { return matchItem(item, "item.eraser", Material.WOOL, (short) 14); }
+    private boolean isEraserItem(ItemStack item) { return matchItem(item, "item.eraser", Material.TNT, (short) 0); }
     private boolean isColorPickerItem(ItemStack item) { return matchItem(item, "item.color-picker", Material.COMPASS, (short) 0); }
     private boolean isInGame(Player player) { return player.hasMetadata("inbmt"); }
 
@@ -446,9 +456,22 @@ public class GameListener implements Listener {
         }
     }
 
-    private void playToolSound(Player player) {
-        if (instance.getConfig().getBoolean("tool-sound", true)) {
-            player.playSound(player.getLocation(), Sound.FIZZ, 1.0f, 1.0f);
+    private void playItemSound(Game game, Player player, String configPath, Sound defaultSound) {
+        if (!instance.getConfig().getBoolean("tool-sound", true)) return;
+        String soundStr = instance.getConfig().getString(configPath + ".sound", null);
+        Sound sound = defaultSound;
+        float volume = 1.0f;
+        float pitch = 1.0f;
+        if (soundStr != null && !soundStr.isEmpty()) {
+            try {
+                String[] parts = soundStr.split(",");
+                sound = Sound.valueOf(parts[0].trim());
+                if (parts.length > 1) volume = Float.parseFloat(parts[1].trim());
+                if (parts.length > 2) pitch = Float.parseFloat(parts[2].trim());
+            } catch (Exception ignored) {}
+        }
+        for (Player p : game.getPlayers()) {
+            p.playSound(player.getLocation(), sound, volume, pitch);
         }
     }
 

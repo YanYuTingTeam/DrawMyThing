@@ -389,7 +389,7 @@ public class Game {
         a10.runTaskLater(instance, (roundTime - 20) * 20L); tasks.add(a10);
         TaskNextRound endRound = new TaskNextRound(this);
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
-        TaskAlert endMsg = new TaskAlert(ChatUtil.getMessage("time-up"), getPlayers(), this);
+        TaskAlert endMsg = new TaskAlert(ChatUtil.getMessage("time-up", "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
         endMsg.runTaskLater(instance, (roundTime - 5) * 20L); tasks.add(endMsg);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
@@ -453,7 +453,7 @@ public class Game {
     }
 
     private void sendStartedBroadcast() {
-        sendMsg("game-started");
+        sendMsg(instance.getMsgConfig().getString("game-started", ""));
         String title = instance.getConfig().getString("game.started.title", null);
         String subtitle = instance.getConfig().getString("game.started.subtitle", null);
         String soundStr = instance.getConfig().getString("game.started.sound", "LEVEL_UP,1,1");

@@ -163,6 +163,7 @@ item:
     name: '&a默认画笔(剑准心对准画布，按住右键作画)'
     lore:
       - '&7右键方块进行绘画'
+    sound: 'FIZZ,1,1'
   big-pencil:
     material: IRON_SWORD
     data: 0
@@ -170,6 +171,7 @@ item:
     name: '&a&l粗画笔(剑准心对准画布，按住右键作画)'
     lore:
       - '&7右键方块进行十字绘画'
+    sound: 'FIZZ,1,1'
   eraser:
     material: TNT
     data: 14
@@ -177,6 +179,7 @@ item:
     name: '&c清空画布(右键清空)'
     lore:
       - '&7右键清空画布'
+    sound: 'EXPLODE,1,1'
   color-picker:
     material: BUCKET
     data: 0
@@ -184,6 +187,7 @@ item:
     name: '&9填充画布(右键填充)'
     lore:
       - '&7右键用选中的颜色填充画布'
+    sound: 'SPLASH,1,0.8'
 
 color-picker:
   title: '&4&l选择颜色'
