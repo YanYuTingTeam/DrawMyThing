@@ -212,7 +212,12 @@ color-picker:
 beforestart:
   time: 15
   broadcast:
-    sound: 'ORB_PICKUP,1,1'
+    sound:
+      - 'ORB_PICKUP,1,1.2'
+      - 'ORB_PICKUP,1,1.4'
+      - 'ORB_PICKUP,1,1.6'
+      - 'ORB_PICKUP,1,1.8'
+      - 'ORB_PICKUP,1,2'
     title: '&a%time%'
     subtitle: ''
     fade-in: 5
@@ -254,6 +259,16 @@ game:
       fade-in: 10
       stay: 30
       fade-out: 10
+  broadcast:
+    sound:
+      - 'ORB_PICKUP,1,1'
+      - 'ORB_PICKUP,1,1.5'
+      - 'ORB_PICKUP,1,2'
+    showtime: [2, 1, 0]
+  newround:
+    sounds:
+      - 'ORB_PICKUP,1,2'
+      - 'NOTE_PLING,1,1'
 
 tip:
   splice: ' '

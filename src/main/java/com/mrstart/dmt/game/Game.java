@@ -199,6 +199,17 @@ public class Game {
         for (Player p : score.keySet()) p.playSound(p.getLocation(), sound, volume, pitch);
     }
 
+    public void playSoundsForAll(List<String> soundList) {
+        if (soundList == null) return;
+        for (String s : soundList) {
+            if (s == null || s.isEmpty()) continue;
+            try {
+                String[] sp = s.split(",");
+                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+            } catch (Exception ignored) {}
+        }
+    }
+
     public void sendTitleToAll(String title, String subtitle, int fadeIn, int stay, int fadeOut) {
         for (Player p : score.keySet()) ChatUtil.sendTitle(p, title, subtitle, fadeIn, stay, fadeOut);
     }
@@ -404,10 +415,18 @@ public class Game {
 
         if (builder == null) return;
 
+        playSoundsForAll(instance.getConfig().getStringList("game.newround.sounds"));
+
+        int roundTime = instance.getConfig().getInt("game.round-time", 75);
+        List<Integer> gameBroadcastShowtime = instance.getConfig().getIntegerList("game.broadcast.showtime");
+        if (gameBroadcastShowtime != null && !gameBroadcastShowtime.isEmpty()) {
+            List<String> gameSoundList = instance.getConfig().getStringList("game.broadcast.sound");
+            runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false);
+        }
+
         List<Integer> hints = instance.getConfig().getIntegerList("game.hints");
         if (hints == null || hints.isEmpty()) hints = Arrays.asList(40, 50, 55);
         for (int h : hints) { TaskAddLetter t = new TaskAddLetter(this); t.runTaskLater(instance, h * 20L); tasks.add(t); }
-        int roundTime = instance.getConfig().getInt("game.round-time", 75);
         TaskNextRound endRound = new TaskNextRound(this);
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
         TaskAlert endMsg = new TaskAlert(formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
@@ -562,20 +581,21 @@ public class Game {
         }
     }
 
-    private void runCountdownBroadcast(int totalTime, List<Integer> showtime, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning) {
+    private void runCountdownBroadcast(int totalTime, List<Integer> showtime, List<String> soundList, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning) {
         if (showtime == null || showtime.isEmpty()) return;
-        for (int t : showtime) {
+        for (int idx = 0; idx < showtime.size(); idx++) {
+            final int t = showtime.get(idx);
             if (t > totalTime) continue;
-            final int timeLeft = t;
-            final String fs = soundStr;
+            final String fs = soundList != null && idx < soundList.size() ? soundList.get(idx) : null;
             final String ft = titleStr;
             final String fst = subtitleStr;
+            final int timeLeft = t;
             new BukkitRunnable() {
                 public void run() {
                     if (checkRunning ? !aftergameRunning : !waiting) { cancel(); return; }
                     broadcastCountdown(timeLeft, fs, ft, fst, fadeIn, stay, fadeOut, timePlaceholder);
                 }
-            }.runTaskLater(instance, (totalTime - timeLeft) * 20L);
+            }.runTaskLater(instance, (totalTime - t) * 20L);
         }
     }
 
@@ -596,13 +616,13 @@ public class Game {
     private void startCountdownBroadcast(int totalTime) {
         List<Integer> showtime = instance.getConfig().getIntegerList("beforestart.showtime");
         if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
-        String soundStr = instance.getConfig().getString("beforestart.broadcast.sound", "ORB_PICKUP,1,1");
+        List<String> soundList = instance.getConfig().getStringList("beforestart.broadcast.sound");
         String titleStr = instance.getConfig().getString("beforestart.broadcast.title", "&6&l游戏将在 %time% 秒后开始");
         String subtitleStr = instance.getConfig().getString("beforestart.broadcast.subtitle", null);
         int fadeIn = instance.getConfig().getInt("beforestart.broadcast.fade-in", 20);
         int stay = instance.getConfig().getInt("beforestart.broadcast.stay", 40);
         int fadeOut = instance.getConfig().getInt("beforestart.broadcast.fade-out", 20);
-        runCountdownBroadcast(totalTime, showtime, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%time%", false);
+        runCountdownBroadcast(totalTime, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%time%", false);
     }
 
     private void startAftergame() {
@@ -613,13 +633,13 @@ public class Game {
         acceptWords = false;
         scoreboard.startEndingScoreboard();
         List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
-        String soundStr = instance.getConfig().getString("aftergame.broadcast.sound", "");
+        List<String> soundList = instance.getConfig().getStringList("aftergame.broadcast.sound");
         String titleStr = instance.getConfig().getString("aftergame.broadcast.title", "&c%endtime%");
         String subtitleStr = instance.getConfig().getString("aftergame.broadcast.subtitle", null);
         int fadeIn = instance.getConfig().getInt("aftergame.broadcast.fade-in", 5);
         int stay = instance.getConfig().getInt("aftergame.broadcast.stay", 10);
         int fadeOut = instance.getConfig().getInt("aftergame.broadcast.fade-out", 5);
-        runCountdownBroadcast(aftergameDuration, showtime, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true);
+        runCountdownBroadcast(aftergameDuration, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true);
         new BukkitRunnable() {
             public void run() { stopAftergame(); }
         }.runTaskLater(instance, aftergameDuration * 20L);
