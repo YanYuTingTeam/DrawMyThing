@@ -1,30 +1,141 @@
 package com.mrstart.dmt;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-public class ChatUtil
-{
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
-    public ChatUtil()
-    {
+public class ChatUtil {
+
+    private static DrawMyThing plugin;
+
+    public static void init(DrawMyThing instance) {
+        plugin = instance;
     }
 
-    public static void send(Player p, String message)
-    {
-        p.sendMessage((new StringBuilder(String.valueOf(PREFIX))).append(message).toString());
+    public static String colorize(String message) {
+        if (message == null) return "";
+        return ChatColor.translateAlternateColorCodes('&', message);
     }
 
-    public static void broadcast(String message)
-    {
-        Bukkit.broadcastMessage((new StringBuilder(String.valueOf(PREFIX))).append(message).toString());
+    public static String getPrefix() {
+        if (plugin != null) {
+            return colorize(plugin.getMsgConfig().getString("prefix", "&b[DrawMyThing] &f"));
+        }
+        return ChatColor.BLUE + "[DrawMyThing] " + ChatColor.WHITE;
     }
 
-    private static final String PREFIX;
+    public static void send(Player player, String message) {
+        player.sendMessage(getPrefix() + colorize(message));
+    }
 
-    static 
-    {
-        PREFIX = (new StringBuilder()).append(ChatColor.BLUE).append("[DrawMyThing] ").append(ChatColor.WHITE).toString();
+    /**
+     * 获取配置中的消息并替换占位符
+     */
+    public static String getMessage(String key, String... replacements) {
+        if (plugin == null) return key;
+        String msg = plugin.getMsgConfig().getString(key, key);
+        msg = colorize(msg);
+        for (int i = 0; i < replacements.length - 1; i += 2) {
+            msg = msg.replace(replacements[i], replacements[i + 1]);
+        }
+        return msg;
+    }
+
+    /**
+     * 发送配置中的消息给玩家（带前缀+占位符替换）
+     */
+    public static void sendMsg(Player player, String key, String... replacements) {
+        player.sendMessage(getPrefix() + getMessage(key, replacements));
+    }
+
+    // ============ NMS Title / Actionbar (1.8) ============
+
+    private static String nmsVersion = null;
+
+    private static String getNmsVersion() {
+        if (nmsVersion == null) {
+            String name = org.bukkit.Bukkit.getServer().getClass().getPackage().getName();
+            nmsVersion = name.substring(name.lastIndexOf('.') + 1);
+        }
+        return nmsVersion;
+    }
+
+    private static Class<?> getNMSClass(String name) throws ClassNotFoundException {
+        return Class.forName("net.minecraft.server." + getNmsVersion() + "." + name);
+    }
+
+    /**
+     * 发送 Title 给玩家 (1.8 NMS)
+     */
+    public static void sendTitle(Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
+        try {
+            Class<?> packetTitleClass = getNMSClass("PacketPlayOutTitle");
+            Class<?> enumTitleAction = getNMSClass("PacketPlayOutTitle$EnumTitleAction");
+            Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
+            Class<?> chatComponent = getNMSClass("IChatBaseComponent");
+
+            // 发送时间包
+            Object timingPacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent, int.class, int.class, int.class)
+                    .newInstance(enumTitleAction.getEnumConstants()[2], null, fadeIn, stay, fadeOut);
+            sendPacket(player, timingPacket);
+
+            // 发送 Title
+            if (title != null && !title.isEmpty()) {
+                Method aMethod = chatSerializer.getMethod("a", String.class);
+                Object titleComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(title) + "\"}");
+                Object titlePacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent)
+                        .newInstance(enumTitleAction.getEnumConstants()[0], titleComponent);
+                sendPacket(player, titlePacket);
+            }
+
+            // 发送 Subtitle
+            if (subtitle != null && !subtitle.isEmpty()) {
+                Method aMethod = chatSerializer.getMethod("a", String.class);
+                Object subtitleComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(subtitle) + "\"}");
+                Object subtitlePacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent)
+                        .newInstance(enumTitleAction.getEnumConstants()[1], subtitleComponent);
+                sendPacket(player, subtitlePacket);
+            }
+        } catch (Exception e) {
+            // 降级：直接发消息
+            if (title != null && !title.isEmpty()) {
+                player.sendMessage(colorize(title));
+            }
+            if (subtitle != null && !subtitle.isEmpty()) {
+                player.sendMessage(colorize(subtitle));
+            }
+        }
+    }
+
+    /**
+     * 发送 Actionbar 给玩家 (1.8 NMS)
+     */
+    public static void sendActionBar(Player player, String message) {
+        try {
+            Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
+            Class<?> packetChatClass = getNMSClass("PacketPlayOutChat");
+
+            Method aMethod = chatSerializer.getMethod("a", String.class);
+            Object chatComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(message) + "\"}");
+
+            // 1.8 PacketPlayOutChat(IChatBaseComponent, byte) — byte=2 为 actionbar
+            Object packet = packetChatClass.getConstructor(
+                    getNMSClass("IChatBaseComponent"), byte.class)
+                    .newInstance(chatComponent, (byte) 2);
+
+            sendPacket(player, packet);
+        } catch (Exception e) {
+            // 降级
+            player.sendMessage(colorize(message));
+        }
+    }
+
+    private static void sendPacket(Player player, Object packet) throws Exception {
+        Object handle = player.getClass().getMethod("getHandle").invoke(player);
+        Object playerConnection = handle.getClass().getField("playerConnection").get(handle);
+        playerConnection.getClass().getMethod("sendPacket", getNMSClass("Packet"))
+                .invoke(playerConnection, packet);
     }
 }

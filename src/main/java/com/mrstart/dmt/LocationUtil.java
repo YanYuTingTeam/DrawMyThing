@@ -1,34 +1,31 @@
 package com.mrstart.dmt;
 
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 
-public class LocationUtil
-{
+public class LocationUtil {
 
-    public LocationUtil()
-    {
+    public static String LocationToString(Location l) {
+        if (l == null || l.getWorld() == null) return "";
+        return l.getWorld().getName() + ":" + l.getBlockX() + ":" + l.getBlockY() + ":" + l.getBlockZ()
+                + ":" + l.getYaw() + ":" + l.getPitch();
     }
 
-    public static String LocationToString(Location l)
-    {
-        return (new StringBuilder(String.valueOf(String.valueOf((new StringBuilder(String.valueOf(l.getWorld().getName()))).append(":").append(l.getBlockX()).toString())))).append(":").append(String.valueOf(l.getBlockY())).append(":").append(String.valueOf(l.getBlockZ())).toString();
-    }
-
-    public static Location StringToLoc(String s)
-    {
-        Location l = null;
-        try
-        {
-            World world = Bukkit.getWorld(s.split(":")[0]);
-            Double x = Double.valueOf(Double.parseDouble(s.split(":")[1]));
-            Double y = Double.valueOf(Double.parseDouble(s.split(":")[2]));
-            Double z = Double.valueOf(Double.parseDouble(s.split(":")[3]));
-            l = new Location(world, x.doubleValue(), y.doubleValue(), z.doubleValue());
+    public static Location StringToLoc(String s) {
+        if (s == null || s.isEmpty()) return null;
+        try {
+            String[] parts = s.split(":");
+            World world = Bukkit.getWorld(parts[0]);
+            if (world == null) return null;
+            double x = Double.parseDouble(parts[1]);
+            double y = Double.parseDouble(parts[2]);
+            double z = Double.parseDouble(parts[3]);
+            float yaw = parts.length > 4 ? Float.parseFloat(parts[4]) : 0f;
+            float pitch = parts.length > 5 ? Float.parseFloat(parts[5]) : 0f;
+            return new Location(world, x, y, z, yaw, pitch);
+        } catch (Exception ex) {
+            return null;
         }
-        catch(Exception ex)
-        {
-            ex.printStackTrace();
-        }
-        return l;
     }
 }

@@ -4,410 +4,481 @@ import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.game.Game;
 import com.mrstart.dmt.game.GameListener;
 import com.mrstart.dmt.sign.SignListener;
-import java.util.*;
-import java.util.logging.Logger;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.FileConfigurationOptions;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
-// Referenced classes of package com.mrstart.dmt:
-//            ChatUtil, LocationUtil
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
-public class DrawMyThing extends JavaPlugin
-{
+public class DrawMyThing extends JavaPlugin {
 
-    public DrawMyThing()
-    {
-        games = new ArrayList();
-        logger = Logger.getLogger("Minecraft");
-        plugin = this;
-        words = new ArrayList();
-        white = new ItemStack(Material.WOOL);
-        ItemMeta wm = white.getItemMeta();
-        wm.setDisplayName((new StringBuilder()).append(ChatColor.WHITE).append("White").toString());
-        white.setItemMeta(wm);
-        black = new ItemStack(Material.WOOL, 1, DyeColor.BLACK.getData());
-        ItemMeta bm = black.getItemMeta();
-        bm.setDisplayName((new StringBuilder()).append(ChatColor.BLACK).append("Black").toString());
-        black.setItemMeta(bm);
-        red = new ItemStack(Material.WOOL, 1, DyeColor.RED.getData());
-        ItemMeta rm = red.getItemMeta();
-        rm.setDisplayName((new StringBuilder()).append(ChatColor.RED).append("Red").toString());
-        red.setItemMeta(rm);
-        orange = new ItemStack(Material.WOOL, 1, DyeColor.ORANGE.getData());
-        ItemMeta om = orange.getItemMeta();
-        om.setDisplayName((new StringBuilder()).append(ChatColor.GOLD).append("Orange").toString());
-        orange.setItemMeta(om);
-        yellow = new ItemStack(Material.WOOL, 1, DyeColor.YELLOW.getData());
-        ItemMeta ym = yellow.getItemMeta();
-        ym.setDisplayName((new StringBuilder()).append(ChatColor.YELLOW).append("Yellow").toString());
-        yellow.setItemMeta(ym);
-        green = new ItemStack(Material.WOOL, 1, DyeColor.LIME.getData());
-        ItemMeta gm = green.getItemMeta();
-        gm.setDisplayName((new StringBuilder()).append(ChatColor.GREEN).append("Green").toString());
-        green.setItemMeta(gm);
-        blue = new ItemStack(Material.WOOL, 1, DyeColor.LIGHT_BLUE.getData());
-        ItemMeta blm = blue.getItemMeta();
-        blm.setDisplayName((new StringBuilder()).append(ChatColor.AQUA).append("Blue").toString());
-        blue.setItemMeta(blm);
-        purple = new ItemStack(Material.WOOL, 1, DyeColor.PURPLE.getData());
-        ItemMeta pm = purple.getItemMeta();
-        pm.setDisplayName((new StringBuilder()).append(ChatColor.DARK_PURPLE).append("Purple").toString());
-        purple.setItemMeta(pm);
-        brown = new ItemStack(Material.WOOL, 1, DyeColor.BROWN.getData());
-        ItemMeta brm = brown.getItemMeta();
-        brm.setDisplayName((new StringBuilder()).append(ChatColor.GRAY).append("Brown").toString());
-        brown.setItemMeta(brm);
-    }
+    private List<Game> games = new ArrayList<Game>();
+    private List<String> words = new ArrayList<String>();
+    public Inventory cci;
 
-    public void onDisable()
-    {
-        PluginDescriptionFile pdfFile = getDescription();
-        getLogger().info((new StringBuilder(String.valueOf(pdfFile.getName()))).append("Disabled !").toString());
-        List names = new ArrayList();
-        Game b;
-        for(Iterator iterator = games.iterator(); iterator.hasNext(); b.save(getConfig()))
-        {
-            b = (Game)iterator.next();
-            names.add(b.getName());
-            b.stop();
-        }
+    private ItemStack[] colorItems = new ItemStack[16];
+    private ItemStack leaveItem;
+    private ItemStack pencilItem;
+    private ItemStack bigPencilItem;
+    private ItemStack eraserItem;
+    private ItemStack colorPickerItem;
 
-        getConfig().set("games", names);
-        games.clear();
-        saveConfig();
-    }
+    private File gamesFile;
+    private FileConfiguration gamesConfig;
+    private File msgFile;
+    private FileConfiguration msgConfig;
+    private BukkitRunnable weatherTask = null;
 
-    public void onEnable()
-    {
-        PluginDescriptionFile pdfFile = getDescription();
-        getLogger().info((new StringBuilder(String.valueOf(pdfFile.getName()))).append(" has been enabled!").toString());
-        loadConfig();
-        cci = Bukkit.createInventory(null, 9, "Choose Pencil Color");
-        GameListener bListener = new GameListener(this);
-        SignListener sListener = new SignListener(this);
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        setupGamesFile();
+        setupMessageFile();
+        ChatUtil.init(this);
+
+        initItems();
+        loadWords();
+        loadGames();
+
+        cci = Bukkit.createInventory(null, 18,
+                ChatUtil.colorize(getConfig().getString("color-picker.title", "选择画笔颜色")));
+        initColorItems();
+
         PluginManager pm = getServer().getPluginManager();
-        pm.registerEvents(bListener, this);
-        pm.registerEvents(sListener, this);
+        pm.registerEvents(new GameListener(this), this);
+        pm.registerEvents(new SignListener(this), this);
+
+        if (getConfig().getBoolean("force-clear-weather", true)) startWeatherLock();
+
+        getLogger().info("DrawMyThing v" + getDescription().getVersion() + " has been enabled!");
     }
 
-    public String getRandomWord()
-    {
-        int i = words.size();
-        Random r = new Random();
-        return (String)words.get(r.nextInt(i));
+    @Override
+    public void onDisable() {
+        saveAllGames();
+        if (weatherTask != null) weatherTask.cancel();
+        getLogger().info("DrawMyThing has been disabled!");
     }
 
-    public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String args[])
-    {
-        if(cmd.getName().equals("dmt"))
-            if(sender instanceof Player)
-            {
-                Player player = (Player)sender;
-                if(args.length > 0)
-                {
-                    if(args[0].equals("setcanvaspos1") && player.hasPermission("dmt.admin"))
-                    {
-                        ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("Position 1 has been set!").toString());
-                        player.setMetadata("bmtp1", new FixedMetadataValue(this, LocationUtil.LocationToString(player.getLocation())));
-                        return true;
-                    }
-                    if(args[0].equals("setcanvaspos2") && player.hasPermission("dmt.admin"))
-                    {
-                        ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("Position 2 has been set!").toString());
-                        player.setMetadata("bmtp2", new FixedMetadataValue(this, LocationUtil.LocationToString(player.getLocation())));
-                        return true;
-                    }
-                    if(args[0].equals("setspawn") && player.hasPermission("dmt.admin"))
-                    {
-                        ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("The spawnpoint has been set!").toString());
-                        player.setMetadata("bmtspec", new FixedMetadataValue(this, LocationUtil.LocationToString(player.getLocation())));
-                        return true;
-                    }
-                    if(args[0].equals("setbuilderspawn") && player.hasPermission("dmt.admin"))
-                    {
-                        ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("The builder spawnpoint has been set!").toString());
-                        player.setMetadata("bmtbspawn", new FixedMetadataValue(this, LocationUtil.LocationToString(player.getLocation())));
-                        return true;
-                    }
-                    if(args[0].equals("create") && player.hasPermission("dmt.admin"))
-                    {
-                        if(args.length > 1)
-                        {
-                            if(player.hasMetadata("bmtp1") && player.hasMetadata("bmtp2") && player.hasMetadata("bmtspec"))
-                            {
-                                if(getGameByName(args[1]) != null)
-                                {
-                                    ChatUtil.send(player, "A game with this name already exist!");
-                                } else
-                                {
-                                    Location loc1 = LocationUtil.StringToLoc(((MetadataValue)player.getMetadata("bmtp1").get(0)).asString());
-                                    Location loc2 = LocationUtil.StringToLoc(((MetadataValue)player.getMetadata("bmtp2").get(0)).asString());
-                                    Location spawn = LocationUtil.StringToLoc(((MetadataValue)player.getMetadata("bmtspec").get(0)).asString());
-                                    Location bspawn = LocationUtil.StringToLoc(((MetadataValue)player.getMetadata("bmtbspawn").get(0)).asString());
-                                    Game b = new Game(new CuboidZone(loc1.getBlock(), loc2.getBlock()), spawn, bspawn, args[1], this);
-                                    if(args.length > 2 && isInteger(args[2]))
-                                        b.setMaxPlayers(Integer.parseInt(args[2]));
-                                    games.add(b);
-                                    ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("The game ").append(args[1]).append(" has been created!").toString());
-                                }
-                            } else
-                            {
-                                ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("The game could not be created!").toString());
-                            }
-                        } else
-                        {
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You must specify a game name!").toString());
-                        }
-                    } else
-                    if(args[0].equals("delete") && player.hasPermission("dmt.admin"))
-                    {
-                        if(args.length > 1)
-                        {
-                            if(getGameByName(args[1]) != null)
-                            {
-                                getGameByName(args[1]).remove(getConfig());
-                                games.remove(getGameByName(args[1]));
-                                ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("The game ").append(args[1]).append(" has been deleted!").toString());
-                            } else
-                            {
-                                ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("The game ").append(args[1]).append(" does not exist!").toString());
-                            }
-                        } else
-                        {
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You must specify a game name!").toString());
-                        }
-                    } else
-                    if(args[0].equals("setmax") && player.hasPermission("dmt.admin"))
-                    {
-                        if(args.length > 1)
-                        {
-                            if(getGameByName(args[1]) != null)
-                            {
-                                if(args.length > 2)
-                                {
-                                    getGameByName(args[1]).stop();
-                                    getGameByName(args[1]).setMaxPlayers(Integer.valueOf(args[2]).intValue());
-                                    ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("The game ").append(args[1]).append(" has now has a max player limit of ").append(args[2]).append("!").toString());
-                                }
-                            } else
-                            {
-                                ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("The game ").append(args[1]).append(" does not exist!").toString());
-                            }
-                        } else
-                        {
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You must specify a game name!").toString());
-                        }
-                    } else
-                    if(args[0].equals("setmin") && player.hasPermission("dmt.admin"))
-                    {
-                        if(args.length > 1)
-                        {
-                            if(getGameByName(args[1]) != null)
-                            {
-                                if(args.length > 2)
-                                {
-                                    getGameByName(args[1]).stop();
-                                    getGameByName(args[1]).setMinPlayers(Integer.valueOf(args[2]).intValue());
-                                    ChatUtil.send(player, (new StringBuilder()).append(ChatColor.GREEN).append("The game ").append(args[1]).append(" must now have ").append(args[2]).append(" players to start!").toString());
-                                }
-                            } else
-                            {
-                                ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("The game ").append(args[1]).append(" does not exist!").toString());
-                            }
-                        } else
-                        {
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You must specify a game name!").toString());
-                        }
-                    } else
-                    if(args[0].equals("reload") && player.hasPermission("dmt.admin"))
-                    {
-                        stopAllGames();
-                        reloadConfig();
-                        loadConfig();
-                    } else
-                    if(args[0].equals("join") && player.hasPermission("dmt.default"))
-                    {
-                        if(player.hasMetadata("inbmt"))
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You are already in a game!").toString());
-                        else
-                        if(args.length > 1)
-                        {
-                            if(getGameByName(args[1]) != null)
-                                getGameByName(args[1]).join(player);
-                            else
-                                ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("The game ").append(args[1]).append(" does not exist!").toString());
-                        } else
-                        {
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You must specify a game name!").toString());
-                        }
-                    } else
-                    if(args[0].equals("leave") && player.hasPermission("dmt.default"))
-                    {
-                        if(player.hasMetadata("inbmt"))
-                            getGameByName(((MetadataValue)player.getMetadata("inbmt").get(0)).asString()).leave(player);
-                        else
-                            ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("You are not currently in a game!").toString());
-                    } else
-                    if(args[0].equals("help"))
-                    {
-                        if(player.hasPermission("dmt.admin"))
-                        {
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt setcanvaspos1 ").append(ChatColor.GRAY).append("Set the first point to your current position").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt setcanvaspos2 ").append(ChatColor.GRAY).append("Set the second point to your current position").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt setspawn ").append(ChatColor.GRAY).append("Set the spawn point to your current position").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt create <gameName> ").append(ChatColor.GRAY).append("Create a new game with the specified name").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt delete <gameName> ").append(ChatColor.GRAY).append("Remove the game with the specified name").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt setmin <gameName> ").append(ChatColor.GRAY).append("Change min players to start the game of the specified name").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt setmax <gameName> ").append(ChatColor.GRAY).append("Change player limit of the game wih the specified name").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt reload").append(ChatColor.GRAY).append("Reload the plugin").toString());
-                        }
-                        if(player.hasPermission("dmt.default"))
-                        {
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt join <gameName> ").append(ChatColor.GRAY).append("Join the game with the specified name").toString());
-                            player.sendMessage((new StringBuilder()).append(ChatColor.GOLD).append("/dmt leave ").append(ChatColor.GRAY).append("Leave your current game").toString());
-                        }
-                    } else
-                    {
-                        ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("Unknown command!").toString());
-                    }
-                } else
-                {
-                    ChatUtil.send(player, (new StringBuilder()).append(ChatColor.RED).append("Unknown command!").toString());
-                }
-            } else
-            {
-                sender.sendMessage("Sorry this command can only be run by a player");
+    // ============ 配置文件 ============
+
+    private void setupGamesFile() {
+        gamesFile = new File(getDataFolder(), "games.yml");
+        if (!gamesFile.exists()) { gamesFile.getParentFile().mkdirs(); saveResource("games.yml", false); }
+        gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
+    }
+
+    private void setupMessageFile() {
+        msgFile = new File(getDataFolder(), "message.yml");
+        if (!msgFile.exists()) { msgFile.getParentFile().mkdirs(); saveResource("message.yml", false); }
+        msgConfig = YamlConfiguration.loadConfiguration(msgFile);
+    }
+
+    public FileConfiguration getMsgConfig() { return msgConfig; }
+    public FileConfiguration getGamesConfig() { return gamesConfig; }
+
+    private void saveGamesFile() {
+        try { gamesConfig.save(gamesFile); }
+        catch (IOException e) { getLogger().warning("Could not save games.yml: " + e.getMessage()); }
+    }
+
+    private void loadWords() {
+        words.clear();
+        List<String> wordList = getConfig().getStringList("words");
+        if (wordList != null && !wordList.isEmpty()) words.addAll(wordList);
+    }
+
+    private void loadGames() {
+        games.clear();
+        if (gamesConfig.getConfigurationSection("games") == null) return;
+        for (String name : gamesConfig.getConfigurationSection("games").getKeys(false)) {
+            Game game = Game.load(gamesConfig, name, this);
+            if (game != null) { games.add(game); getLogger().info("Loaded game: " + name); }
+        }
+    }
+
+    private void saveAllGames() {
+        gamesConfig.set("games", null);
+        for (Game game : games) game.save(gamesConfig);
+        saveGamesFile();
+    }
+
+    public String getRandomWord() {
+        if (words.isEmpty()) return "unknown";
+        return words.get(new Random().nextInt(words.size()));
+    }
+
+    public Game getGameByName(String name) {
+        for (Game game : games) { if (game.getName().equalsIgnoreCase(name)) return game; }
+        return null;
+    }
+
+    public List<Game> getGames() { return games; }
+
+    // ============ 可配置物品 ============
+
+    private void initItems() {
+        leaveItem = buildItemFromConfig("item.leave", Material.BED, (short) 14, "&c返回大厅", null);
+        pencilItem = buildItemFromConfig("item.pencil", Material.STICK, (short) 0, "&b铅笔", null);
+        bigPencilItem = buildItemFromConfig("item.big-pencil", Material.BLAZE_ROD, (short) 0, "&e大号铅笔", null);
+        eraserItem = buildItemFromConfig("item.eraser", Material.WOOL, (short) 14, "&c橡皮擦", null);
+        colorPickerItem = buildItemFromConfig("item.color-picker", Material.COMPASS, (short) 0, "&a选择颜色", null);
+    }
+
+    private ItemStack buildItemFromConfig(String path, Material defMat, short defData, String defName, List<String> defLore) {
+        FileConfiguration cfg = getConfig();
+        Material mat = defMat;
+        String matStr = cfg.getString(path + ".material", null);
+        if (matStr != null) {
+            try { mat = Material.valueOf(matStr.toUpperCase()); }
+            catch (IllegalArgumentException e) {
+                try { mat = Material.getMaterial(Integer.parseInt(matStr)); } catch (Exception ignored) {}
             }
-        return false;
-    }
-
-    private void stopAllGames()
-    {
-        Game b;
-        for(Iterator iterator = games.iterator(); iterator.hasNext(); b.stop())
-            b = (Game)iterator.next();
-
-    }
-
-    private void loadConfig()
-    {
-        getConfig().options().copyDefaults(true);
-        getConfig().options().header("Default Draw My Thing Config!");
-        if(!getConfig().contains("words"))
-            getConfig().set("words", DEFAULT_WORDS);
-        getConfig().addDefault("tool-sound", Boolean.valueOf(true));
-        saveConfig();
-        this.games.clear();
-        this.words.clear();
-        if(getConfig().getList("games") != null && getConfig().getList("games").size() > 0 && (getConfig().getList("games").get(0) instanceof String))
-        {
-            List games = getConfig().getList("games");
-            String s;
-            for(Iterator iterator = games.iterator(); iterator.hasNext(); this.games.add(Game.load(getConfig(), s, this)))
-                s = (String)iterator.next();
-
         }
-        if(getConfig().getList("words") != null && getConfig().getList("words").size() > 0 && (getConfig().getList("words").get(0) instanceof String))
-        {
-            List words = getConfig().getList("words");
-            for(Iterator iterator1 = words.iterator(); iterator1.hasNext();)
-            {
-                String s = (String)iterator1.next();
-                if(s != null)
-                    this.words.add(s);
+        short data = defData;
+        if (cfg.contains(path + ".data")) data = (short) cfg.getInt(path + ".data");
+
+        ItemStack item = new ItemStack(mat, 1, data);
+        ItemMeta meta = item.getItemMeta();
+        String name = cfg.getString(path + ".name", null);
+        if (name != null) meta.setDisplayName(ChatUtil.colorize(name));
+        else if (defName != null) meta.setDisplayName(ChatUtil.colorize(defName));
+
+        List<String> lore = cfg.getStringList(path + ".lore");
+        if (lore != null && !lore.isEmpty()) {
+            List<String> coloredLore = new ArrayList<String>();
+            for (String line : lore) coloredLore.add(ChatUtil.colorize(line));
+            meta.setLore(coloredLore);
+        } else if (defLore != null) meta.setLore(defLore);
+
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public void giveConfigItem(Player player, String path, ItemStack item) {
+        int slot = getConfig().getInt(path + ".slot", 0);
+        player.getInventory().setItem(slot, item);
+    }
+
+    public ItemStack getLeaveItem() { return leaveItem; }
+    public ItemStack getPencilItem() { return pencilItem; }
+    public ItemStack getBigPencilItem() { return bigPencilItem; }
+    public ItemStack getEraserItem() { return eraserItem; }
+    public ItemStack getColorPickerItem() { return colorPickerItem; }
+
+    // ============ 颜色选择GUI ============
+
+    private void initColorItems() {
+        cci.clear();
+        ConfigurationSection colorSection = getConfig().getConfigurationSection("color-picker.colors");
+        if (colorSection != null) {
+            for (String key : colorSection.getKeys(false)) {
+                ConfigurationSection c = colorSection.getConfigurationSection(key);
+                if (c == null) continue;
+                int woolData = c.getInt("wool", 0);
+                String colorName = ChatUtil.colorize(c.getString("name", "&f颜色"));
+                int slot = c.getInt("slot", 0);
+                ItemStack item = new ItemStack(Material.WOOL, 1, (short) woolData);
+                ItemMeta meta = item.getItemMeta();
+                meta.setDisplayName(colorName);
+                item.setItemMeta(meta);
+                if (slot >= 0 && slot < 18) cci.setItem(slot, item);
             }
-
+        } else {
+            String[] names = {"&f白色", "&6橙色", "&5品红色", "&b淡蓝色", "&e黄色", "&a黄绿色",
+                    "&d粉红色", "&8灰色", "&7淡灰色", "&3青色", "&5紫色", "&9蓝色", "&6棕色", "&2绿色", "&c红色", "&0黑色"};
+            for (int i = 0; i < 16; i++) {
+                ItemStack item = new ItemStack(Material.WOOL, 1, (short) i);
+                ItemMeta meta = item.getItemMeta();
+                meta.setDisplayName(ChatUtil.colorize(names[i]));
+                item.setItemMeta(meta);
+                cci.setItem(i, item);
+            }
         }
     }
 
-    public static boolean isInteger(String s)
-    {
-        try
-        {
-            Integer.parseInt(s);
-        }
-        catch(NumberFormatException e)
-        {
-            return false;
+    public static DyeColor woolDataToDyeColor(byte data) {
+        DyeColor[] colors = DyeColor.values();
+        if (data >= 0 && data < colors.length) return colors[data];
+        return DyeColor.WHITE;
+    }
+
+    // ============ 命令 ============
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (!cmd.getName().equalsIgnoreCase("dmt")) return false;
+        if (!(sender instanceof Player)) { sender.sendMessage(ChatUtil.getMessage("player-only")); return true; }
+
+        Player player = (Player) sender;
+        if (args.length == 0) { sendHelp(player); return true; }
+
+        switch (args[0].toLowerCase()) {
+            // ---- 需要 gameName 参数的坐标命令 ----
+            case "setcanvaspos1":
+                if (!checkAdmin(player)) return true;
+                handleSetPos(player, args, 1);
+                break;
+            case "setcanvaspos2":
+                if (!checkAdmin(player)) return true;
+                handleSetPos(player, args, 2);
+                break;
+            case "setspawn":
+                if (!checkAdmin(player)) return true;
+                handleSetSpawn(player, args, "spawn");
+                break;
+            case "setbuilderspawn":
+                if (!checkAdmin(player)) return true;
+                handleSetSpawn(player, args, "builderspawn");
+                break;
+
+            // ---- 游戏管理 ----
+            case "create":
+                if (!checkAdmin(player)) return true;
+                handleCreate(player, args);
+                break;
+            case "delete":
+                if (!checkAdmin(player)) return true;
+                handleDelete(player, args);
+                break;
+            case "setmax":
+                if (!checkAdmin(player)) return true;
+                handleSetMax(player, args);
+                break;
+            case "setmin":
+                if (!checkAdmin(player)) return true;
+                handleSetMin(player, args);
+                break;
+            case "reload":
+                if (!checkAdmin(player)) return true;
+                handleReload(player);
+                break;
+
+            // ---- 玩家命令 ----
+            case "join":
+                handleJoin(player, args);
+                break;
+            case "leave":
+                handleLeave(player);
+                break;
+            case "help":
+                sendHelp(player);
+                break;
+            default:
+                ChatUtil.sendMsg(player, "unknown-command");
+                break;
         }
         return true;
     }
 
-    public Game getGameByName(String name)
-    {
-        Game result = null;
-        for(Iterator iterator = games.iterator(); iterator.hasNext();)
-        {
-            Game b = (Game)iterator.next();
-            if(b.getName().equals(name))
-                result = b;
+    private String joinArgs(String[] args, int from) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = from; i < args.length; i++) { if (i > from) sb.append(" "); sb.append(args[i]); }
+        return sb.toString();
+    }
+
+    /**
+     * /dmt create <gameName>
+     * 以玩家当前世界为region，坐标全部留空
+     */
+    private void handleCreate(Player player, String[] args) {
+        if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        String gameName = joinArgs(args, 1);
+        if (getGameByName(gameName) != null) { ChatUtil.sendMsg(player, "game-already-exists", "%game%", gameName); return; }
+
+        World world = player.getWorld();
+        Game game = Game.createEmpty(gameName, world, this);
+        games.add(game);
+        game.save(gamesConfig);
+        saveGamesFile();
+        ChatUtil.sendMsg(player, "game-created", "%game%", gameName);
+    }
+
+    /**
+     * /dmt setcanvaspos1 <gameName>  — 设置画布坐标1
+     * /dmt setcanvaspos2 <gameName>  — 设置画布坐标2
+     * 两个都设置后自动创建画布区域
+     */
+    private void handleSetPos(Player player, String[] args, int posIndex) {
+        if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        String gameName = joinArgs(args, 1);
+        Game game = getGameByName(gameName);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", gameName); return; }
+
+        Location loc = player.getLocation();
+
+        if (posIndex == 1) {
+            game.setPaintingPos1(loc);
+            ChatUtil.sendMsg(player, "pos1-set", "%game%", gameName);
+        } else {
+            game.setPaintingPos2(loc);
+            ChatUtil.sendMsg(player, "pos2-set", "%game%", gameName);
         }
 
-        return result;
+        // 两个都设置了，自动创建画布区域
+        if (game.getPaintingPos1() != null && game.getPaintingPos2() != null) {
+            game.applyPaintingZone();
+        }
+
+        game.save(gamesConfig);
+        saveGamesFile();
     }
 
-    public void addCCIItems()
-    {
-        cci.addItem(new ItemStack[] {
-            white
-        });
-        cci.addItem(new ItemStack[] {
-            black
-        });
-        cci.addItem(new ItemStack[] {
-            red
-        });
-        cci.addItem(new ItemStack[] {
-            orange
-        });
-        cci.addItem(new ItemStack[] {
-            yellow
-        });
-        cci.addItem(new ItemStack[] {
-            green
-        });
-        cci.addItem(new ItemStack[] {
-            blue
-        });
-        cci.addItem(new ItemStack[] {
-            purple
-        });
-        cci.addItem(new ItemStack[] {
-            brown
-        });
+    /**
+     * /dmt setspawn <gameName>       — 设置观战出生点
+     * /dmt setbuilderspawn <gameName> — 设置绘画者出生点
+     */
+    private void handleSetSpawn(Player player, String[] args, String type) {
+        if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        String gameName = joinArgs(args, 1);
+        Game game = getGameByName(gameName);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", gameName); return; }
+
+        Location loc = player.getLocation();
+
+        if (type.equals("spawn")) {
+            game.setSpawn(loc);
+            ChatUtil.sendMsg(player, "spawn-set", "%game%", gameName);
+        } else {
+            game.setBuilderSpawn(loc);
+            ChatUtil.sendMsg(player, "builder-spawn-set", "%game%", gameName);
+        }
+
+        game.save(gamesConfig);
+        saveGamesFile();
     }
 
-    private List games;
-    public Logger logger;
-    public DrawMyThing plugin;
-    public Inventory cci;
-    public static final List DEFAULT_WORDS = new ArrayList(Arrays.asList(new String[] {
-        "motorbike", "noodle", "sea", "ocean", "leash", "pumpkin", "pyramid", "rainbow", "witch", "house", 
-        "santa", "flower", "pants", "donut", "snake", "snail", "yawn", "stamp", "horse", "apple", 
-        "goblin", "boat", "computer", "river", "cupcake", "football", "chocolate", "frog", "night", "creeper", 
-        "ship", "bow", "tree", "smile", "watch"
-    }));
-    private List words;
-    private ItemStack white;
-    private ItemStack black;
-    private ItemStack red;
-    private ItemStack orange;
-    private ItemStack yellow;
-    private ItemStack green;
-    private ItemStack blue;
-    private ItemStack purple;
-    private ItemStack brown;
+    private void handleDelete(Player player, String[] args) {
+        if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        String gameName = joinArgs(args, 1);
+        Game game = getGameByName(gameName);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", gameName); return; }
+        game.remove(gamesConfig);
+        games.remove(game);
+        saveGamesFile();
+        ChatUtil.sendMsg(player, "game-deleted", "%game%", gameName);
+    }
 
+    private void handleSetMax(Player player, String[] args) {
+        if (args.length < 3) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        Game game = getGameByName(args[1]);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", args[1]); return; }
+        try {
+            int max = Integer.parseInt(args[2]);
+            game.setMaxPlayers(max);
+            game.save(gamesConfig); saveGamesFile();
+            ChatUtil.sendMsg(player, "game-set-max", "%game%", args[1], "%value%", String.valueOf(max));
+        } catch (NumberFormatException e) { ChatUtil.sendMsg(player, "unknown-command"); }
+    }
+
+    private void handleSetMin(Player player, String[] args) {
+        if (args.length < 3) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        Game game = getGameByName(args[1]);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", args[1]); return; }
+        try {
+            int min = Integer.parseInt(args[2]);
+            game.setMinPlayers(min);
+            game.save(gamesConfig); saveGamesFile();
+            ChatUtil.sendMsg(player, "game-set-min", "%game%", args[1], "%value%", String.valueOf(min));
+        } catch (NumberFormatException e) { ChatUtil.sendMsg(player, "unknown-command"); }
+    }
+
+    private void handleJoin(Player player, String[] args) {
+        if (player.hasMetadata("inbmt")) { ChatUtil.sendMsg(player, "already-in-game"); return; }
+        if (args.length < 2) {
+            if (getConfig().getBoolean("autojoin.enabled", false)) handleAutoJoin(player);
+            else ChatUtil.sendMsg(player, "game-name-required");
+            return;
+        }
+        String gameName = joinArgs(args, 1);
+        Game game = getGameByName(gameName);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", gameName); return; }
+        game.join(player);
+    }
+
+    private void handleAutoJoin(Player player) {
+        if (getConfig().getBoolean("autojoin.randomjoin", false)) {
+            List<Game> available = new ArrayList<Game>();
+            for (Game g : games) { if (!g.isStarted() && g.getPlayerCount() < g.getMaxPlayers()) available.add(g); }
+            if (available.isEmpty()) { ChatUtil.sendMsg(player, "auto-join-no-game"); return; }
+            available.get(new Random().nextInt(available.size())).join(player);
+        } else {
+            String target = getConfig().getString("autojoin.joingame", "");
+            if (target.isEmpty()) { ChatUtil.sendMsg(player, "auto-join-no-game"); return; }
+            Game game = getGameByName(target);
+            if (game == null) { ChatUtil.sendMsg(player, "auto-join-failed"); return; }
+            game.join(player);
+        }
+    }
+
+    private void handleLeave(Player player) {
+        if (!player.hasMetadata("inbmt")) { ChatUtil.sendMsg(player, "not-in-game"); return; }
+        String gameName = ((MetadataValue) player.getMetadata("inbmt").get(0)).asString();
+        Game game = getGameByName(gameName);
+        if (game != null) game.leave(player);
+    }
+
+    private void handleReload(Player player) {
+        for (Game game : games) game.stop();
+        games.clear();
+        reloadConfig();
+        msgConfig = YamlConfiguration.loadConfiguration(msgFile);
+        gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
+        initItems();
+        initColorItems();
+        loadWords();
+        loadGames();
+        if (weatherTask != null) weatherTask.cancel();
+        if (getConfig().getBoolean("force-clear-weather", true)) startWeatherLock();
+        ChatUtil.sendMsg(player, "game-reloaded");
+    }
+
+    private void sendHelp(Player player) {
+        if (player.hasPermission("dmt.admin")) {
+            player.sendMessage(ChatUtil.getMessage("help-admin-title"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-create"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-delete"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-pos1"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-pos2"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-spawn"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-bspawn"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-min"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-max"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-reload"));
+        }
+        player.sendMessage(ChatUtil.getMessage("help-player-title"));
+        player.sendMessage(ChatUtil.getMessage("help-player-join"));
+        player.sendMessage(ChatUtil.getMessage("help-player-leave"));
+    }
+
+    private boolean checkAdmin(Player player) {
+        if (!player.hasPermission("dmt.admin")) { ChatUtil.sendMsg(player, "no-permission"); return false; }
+        return true;
+    }
+
+    private void startWeatherLock() {
+        weatherTask = new BukkitRunnable() {
+            public void run() {
+                for (World world : Bukkit.getWorlds()) {
+                    if (world.hasStorm()) { world.setStorm(false); world.setThundering(false); world.setWeatherDuration(999999); }
+                    if (world.isThundering()) world.setThundering(false);
+                }
+            }
+        };
+        weatherTask.runTaskTimer(this, 100L, 200L);
+    }
 }

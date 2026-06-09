@@ -2,277 +2,249 @@ package com.mrstart.dmt.game;
 
 import com.mrstart.dmt.ChatUtil;
 import com.mrstart.dmt.DrawMyThing;
-import java.util.HashSet;
-import java.util.List;
+import com.mrstart.dmt.cuboid.CuboidZone;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.*;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.MetadataValue;
 
-// Referenced classes of package com.mrstart.dmt.game:
-//            Game
+import java.util.HashSet;
+import java.util.List;
 
-public class GameListener
-    implements Listener
-{
+public class GameListener implements Listener {
+    private DyeColor pencilColor = DyeColor.BLACK;
+    private DrawMyThing instance;
 
-    public GameListener(DrawMyThing instance)
-    {
-        color = DyeColor.BLACK;
+    public GameListener(DrawMyThing instance) {
         this.instance = instance;
     }
 
-    public void onPlayerLogOut(PlayerQuitEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt"))
-            instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).leave(event.getPlayer());
+    @EventHandler
+    public void onPlayerLogOut(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        if (player.hasMetadata("inbmt")) {
+            String gameName = getMeta(player, "inbmt");
+            Game game = instance.getGameByName(gameName);
+            if (game != null) game.leave(player);
+        }
     }
 
-    public void onPlayerPlaceBlock(BlockPlaceEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt") && instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()) != null)
-            event.setCancelled(true);
+    @EventHandler
+    public void onPlayerPlaceBlock(BlockPlaceEvent event) {
+        if (isInGame(event.getPlayer())) event.setCancelled(true);
     }
 
-    public void onPlayerInteract(PlayerInteractEvent event)
-    {
-        if(!event.getPlayer().hasMetadata("inbmt"))
-            return;
-        if(instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()) == null)
-            return;
-        if(instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).getBuilder() == null)
-            return;
-        if(instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).getBuilder().getName() != event.getPlayer().getName())
-            return;
-        if(event.getPlayer().getItemInHand() == null)
-            return;
-        if(event.getPlayer().getItemInHand().getType() == Material.STICK && event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getPlayer().isBlocking())
-        {
-            Block b = event.getPlayer().getTargetBlock((HashSet<Byte>) null, 100);
-            if(b.getType() != Material.WOOL)
+    @EventHandler
+    public void onPlayerBreakBlock(BlockBreakEvent event) {
+        if (isInGame(event.getPlayer())) event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player)) return;
+        Player player = (Player) event.getEntity();
+        if (!isInGame(player)) return;
+        if (instance.getConfig().getBoolean("no-damage", true)) event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerDamageByPlayer(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Player)) return;
+        Player attacker = (Player) event.getDamager();
+        if (isInGame(attacker)) event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerHungerChange(FoodLevelChangeEvent event) {
+        if (!(event.getEntity() instanceof Player)) return;
+        Player player = (Player) event.getEntity();
+        if (isInGame(player)) {
+            if (instance.getConfig().getBoolean("no-hunger", true)) {
+                event.setCancelled(true);
+                player.setFoodLevel(20);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        if (!isInGame(player)) return;
+        Game game = getGame(player);
+        if (game == null) return;
+        ItemStack item = player.getItemInHand();
+        if (item == null) return;
+        Action action = event.getAction();
+        if (game.getBuilder() == null || !game.getBuilder().equals(player)) {
+            if (isLeaveItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+                game.leave(player);
                 return;
-            b.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
-            if(instance.getConfig().getBoolean("tool-sound"))
-                event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.FIZZ, 1.0F, 1.0F);
+            }return;
+        }
+
+        if (isPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
+            if (b.getType() != Material.WOOL) return;
+            b.setTypeIdAndData(Material.WOOL.getId(), pencilColor.getData(), true);
+            playToolSound(player);
             return;
         }
-        if(event.getPlayer().getItemInHand().getType() == Material.WOOL && event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
-        {
-            if(event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
-                return;
-            Block b = event.getPlayer().getTargetBlock((HashSet<Byte>) null, 100);
-            if(b.getType() != Material.WOOL)
-                return;
+
+        if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
+            if (b.getType() != Material.WOOL) return;
+            byte data = pencilColor.getData();
+            b.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            b.getRelative(1, 0, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
+            b.getRelative(-1, 0, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
+            b.getRelative(0, 1, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
+            b.getRelative(0, -1, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
+            playToolSound(player);
+            return;
+        }
+
+        if (isEraserItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
+            if (b.getType() != Material.WOOL) return;
             b.setTypeIdAndData(Material.WOOL.getId(), DyeColor.WHITE.getData(), true);
-            if(instance.getConfig().getBoolean("tool-sound"))
-                event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.BAT_TAKEOFF, 1.0F, 1.0F);
-            return;
-        }
-        if(event.getPlayer().getItemInHand().getType() == Material.BLAZE_ROD && event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
-        {
-            Block b = event.getPlayer().getTargetBlock((HashSet<Byte>) null, 100);
-            Block b1 = b.getLocation().add(1.0D, 0.0D, 0.0D).getBlock();
-            Block b2 = b.getLocation().add(0.0D, 1.0D, 0.0D).getBlock();
-            Block b3 = b.getLocation().subtract(1.0D, 0.0D, 0.0D).getBlock();
-            Block b4 = b.getLocation().subtract(0.0D, 1.0D, 0.0D).getBlock();
-            if(b.getType() != Material.WOOL)
-                return;
-            b.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
-            b1.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
-            b2.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
-            b3.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
-            b4.setTypeIdAndData(Material.WOOL.getId(), color.getData(), true);
-            if(instance.getConfig().getBoolean("tool-sound"))
-                event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.FIZZ, 1.0F, 1.0F);
-            return;
-        }
-        if(event.getPlayer().getItemInHand().getType() == Material.COMPASS)
-        {
-            if(event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
-            {
-                return;
-            } else
-            {
-                instance.cci.clear();
-                instance.addCCIItems();
-                event.getPlayer().openInventory(instance.cci);
-                return;
+            if (instance.getConfig().getBoolean("tool-sound", true)) {
+                player.playSound(player.getLocation(), Sound.BAT_TAKEOFF, 1.0f, 1.0f);
             }
-        } else
-        {
             return;
         }
-    }
 
-    public void onPlayerCommand(PlayerCommandPreprocessEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt") && !event.getMessage().startsWith("/dmt") && !event.getPlayer().hasPermission("dmt.admin"))
-        {
-            ChatUtil.send(event.getPlayer(), (new StringBuilder()).append(ChatColor.RED).append("You cannot execute commands while ingame!").toString());
-            event.setCancelled(true);
+        if (isColorPickerItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            player.openInventory(instance.cci);
         }
     }
 
-    public void onPlayerBreakBlock(BlockBreakEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt"))
-            event.setCancelled(true);
-    }
-
-    public void onPlayerDropItem(PlayerDropItemEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt"))
-            event.setCancelled(true);
-    }
-
-    public void onPlayerHit(EntityDamageEvent event)
-    {
-        if(event.getEntity() instanceof Player)
-        {
-            Player p = (Player)event.getEntity();
-            if(p.hasMetadata("inbmt"))
-                event.setCancelled(true);
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        if (!isInGame(player)) return;
+        Game game = getGame(player);
+        if (game == null || !game.isStarted()) return;
+        event.setCancelled(true);
+        if (game.getBuilder() != null && game.getBuilder().equals(player)) {
+            ChatUtil.sendMsg(player, "drawer-no-chat");
+            return;
+        }
+        if (game.hasFound(player)) {
+            ChatUtil.sendMsg(player, "already-found");
+            return;
+        }
+        String word = game.getWord();
+        if (word != null && event.getMessage().toLowerCase().contains(word.toLowerCase())) {
+            game.wordFoundBy(player);
+        } else {
+            game.sendMessage(ChatColor.BOLD + player.getName() + ": " + ChatColor.RESET + event.getMessage().toLowerCase());
         }
     }
 
-    public void onPlayerHungerChange(FoodLevelChangeEvent event)
-    {
-        if(event.getEntity().hasMetadata("inbmt"))
-            event.setCancelled(true);
-    }
-
-    public void onPlayerChat(AsyncPlayerChatEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt") && instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()) != null && instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).isStarted())
-            if(instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).getBuilder().getName() == event.getPlayer().getName())
-            {
-                ChatUtil.send(event.getPlayer(), (new StringBuilder()).append(ChatColor.RED).append("You cannot chat while you are a drawer!").toString());
-                event.setCancelled(true);
-            } else
-            {
-                event.setCancelled(true);
-                String word = instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).getWord();
-                if(instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).hasFound(event.getPlayer()))
-                    ChatUtil.send(event.getPlayer(), (new StringBuilder()).append(ChatColor.RED).append("You have already found the word!").toString());
-                else
-                if(event.getMessage().toLowerCase().contains(word))
-                    instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).wordFoundBy(event.getPlayer());
-                else
-                    instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).sendMessage((new StringBuilder()).append(ChatColor.BOLD).append(event.getPlayer().getName()).append(": ").append(ChatColor.RESET).append(event.getMessage().toLowerCase()).toString());
-            }
-    }
-
-    public void onPlayerMove(PlayerMoveEvent event)
-    {
-        if(event.getPlayer().hasMetadata("inbmt") && instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()) != null && instance.getGameByName(((MetadataValue)event.getPlayer().getMetadata("inbmt").get(0)).asString()).isStarted() && event.getPlayer().getDisplayName().contains("[BUILDER]"))
-        {
-            if(event.getTo().getX() == event.getFrom().getX() && event.getTo().getY() == event.getFrom().getY() && event.getTo().getZ() == event.getFrom().getZ())
-                return;
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        if (!isInGame(player)) return;
+        Game game = getGame(player);
+        if (game == null || !game.isStarted()) return;
+        if (game.getBuilder() != null && game.getBuilder().equals(player)) {
+            if (event.getTo() == null) return;
+            if (event.getTo().getX() == event.getFrom().getX() &&
+                event.getTo().getY() == event.getFrom().getY() &&
+                event.getTo().getZ() == event.getFrom().getZ()) return;
             event.setTo(event.getFrom());
         }
     }
 
-    public void onInvClick(InventoryClickEvent event)
-    {
-        Player p = (Player)event.getWhoClicked();
-        if(p.hasMetadata("inbmt"))
-            if(event.getInventory().getName() == instance.cci.getName())
-            {
-                if(event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR)
-                    return;
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("White"))
-                {
-                    setPencilColor(DyeColor.WHITE);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Black"))
-                {
-                    setPencilColor(DyeColor.BLACK);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Red"))
-                {
-                    setPencilColor(DyeColor.RED);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Orange"))
-                {
-                    setPencilColor(DyeColor.ORANGE);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Yellow"))
-                {
-                    setPencilColor(DyeColor.YELLOW);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Green"))
-                {
-                    setPencilColor(DyeColor.LIME);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Blue"))
-                {
-                    setPencilColor(DyeColor.LIGHT_BLUE);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Purple"))
-                {
-                    setPencilColor(DyeColor.PURPLE);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-                if(event.getCurrentItem().getItemMeta().getDisplayName().contains("Brown"))
-                {
-                    setPencilColor(DyeColor.BROWN);
-                    p.playSound(p.getLocation(), Sound.ORB_PICKUP, 1.0F, 1.0F);
-                    p.closeInventory();
-                    return;
-                }
-            } else
-            {
-                event.setCancelled(true);
-                p.closeInventory();
-                return;
+    @EventHandler
+    public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        if (isInGame(player) && !event.getMessage().startsWith("/dmt") && !player.hasPermission("dmt.admin")) {
+            ChatUtil.sendMsg(player, "no-permission");
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        if (isInGame(event.getPlayer())) event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onInvClick(InventoryClickEvent event) {
+        Player player = (Player) event.getWhoClicked();
+        if (!isInGame(player)) return;
+        if (event.getInventory().equals(instance.cci)) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) return;
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked.getType() == Material.WOOL) {
+                byte woolData = (byte)clicked.getDurability();
+                pencilColor = DrawMyThing.woolDataToDyeColor(woolData);
+                player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1.0f, 1.0f);
             }
+            player.closeInventory();
+        } else {
+            event.setCancelled(true);
+            player.closeInventory();
+        }
     }
 
-    public void setPencilColor(DyeColor color)
-    {
-        this.color = color;
+    private boolean matchItem(ItemStack item, String configPath, Material defaultMat, short defaultData) {
+        if (item == null || item.getType() == Material.AIR) return false;
+        String matStr = instance.getConfig().getString(configPath + ".material", null);
+        Material mat = defaultMat;
+        if (matStr != null) {
+            try { mat = Material.valueOf(matStr.toUpperCase()); }
+            catch (IllegalArgumentException e) {
+                try { mat = Material.getMaterial(Integer.parseInt(matStr)); }
+                catch (Exception ignored) {}
+            }
+        }
+
+        short data = defaultData;
+        if (instance.getConfig().contains(configPath + ".data")) {
+            data = (short) instance.getConfig().getInt(configPath + ".data");
+        }
+        return item.getType() == mat && item.getDurability() == data;
     }
 
-    public DyeColor getColor()
-    {
-        return color;
+    private boolean isLeaveItem(ItemStack item) { return matchItem(item, "item.leave", Material.BED, (short) 14); }
+    private boolean isPencilItem(ItemStack item) { return matchItem(item, "item.pencil", Material.STICK, (short) 0); }
+    private boolean isBigPencilItem(ItemStack item) { return matchItem(item, "item.big-pencil", Material.BLAZE_ROD, (short) 0); }
+    private boolean isEraserItem(ItemStack item) { return matchItem(item, "item.eraser", Material.WOOL, (short) 14); }
+    private boolean isColorPickerItem(ItemStack item) { return matchItem(item, "item.color-picker", Material.COMPASS, (short) 0); }
+    private boolean isInGame(Player player) { return player.hasMetadata("inbmt"); }
+
+    private Game getGame(Player player) {
+        String name = getMeta(player, "inbmt");
+        return name != null ? instance.getGameByName(name) : null;
     }
 
-    private DrawMyThing instance;
-    private Game game;
-    private DyeColor color;
+    private String getMeta(Player player, String key) {
+        if (!player.hasMetadata(key)) return null;
+        List<MetadataValue> values = player.getMetadata(key);
+        return (values != null && !values.isEmpty()) ? values.get(0).asString() : null;
+    }
+
+    private void playToolSound(Player player) {
+        if (instance.getConfig().getBoolean("tool-sound", true)) {
+            player.playSound(player.getLocation(), Sound.FIZZ, 1.0f, 1.0f);
+        }
+    }
+
+    public void setPencilColor(DyeColor color) { this.pencilColor = color; }
+    public DyeColor getColor() { return pencilColor; }
 }

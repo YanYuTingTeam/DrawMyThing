@@ -3,18 +3,10 @@ package com.mrstart.dmt.task;
 import com.mrstart.dmt.game.Game;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class TaskAddLetter extends BukkitRunnable
-{
+public class TaskAddLetter extends BukkitRunnable {
+    private final Game game;
+    public TaskAddLetter(Game game) { this.game = game; }
 
-    public TaskAddLetter(Game g)
-    {
-        this.g = g;
-    }
-
-    public void run()
-    {
-        g.addRandomLetter();
-    }
-
-    private Game g;
+    @Override
+    public void run() { game.addRandomLetter(); }
 }

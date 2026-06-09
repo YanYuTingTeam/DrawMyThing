@@ -1,34 +1,32 @@
 package com.mrstart.dmt.task;
 
 import com.mrstart.dmt.ChatUtil;
-import java.util.Iterator;
-import java.util.List;
+import com.mrstart.dmt.game.Game;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class TaskAlert extends BukkitRunnable
-{
+import java.util.ArrayList;
+import java.util.List;
 
-    public TaskAlert(String message, List players)
-    {
-        MESSAGE = message;
-        sendTo = players;
+public class TaskAlert extends BukkitRunnable {
+    private final String message;
+    private final List<Player> sendTo;
+    private final Game game;
+
+    public TaskAlert(String message, List<Player> players, Game game) {
+        this.message = message;
+        this.sendTo = new ArrayList<Player>(players);
+        this.game = game;
     }
 
-    public void run()
-    {
-        Player p;
-        for(Iterator iterator = sendTo.iterator(); iterator.hasNext(); ChatUtil.send(p, MESSAGE))
-            p = (Player)iterator.next();
-
+    @Override
+    public void run() {
+        for (Player p : sendTo) {
+            if (p.isOnline()) {
+                p.sendMessage(ChatUtil.getPrefix() + message);
+            }
+        }
     }
 
-    public void removePlayer(Player p)
-    {
-        if(sendTo.contains(p))
-            sendTo.remove(p);
-    }
-
-    private final String MESSAGE;
-    private List sendTo;
+    public void removePlayer(Player p) { sendTo.remove(p); }
 }

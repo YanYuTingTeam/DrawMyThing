@@ -19,7 +19,6 @@
     </properties>
 
     <repositories>
-        <!-- Spigot / Bukkit -->
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
@@ -27,7 +26,6 @@
     </repositories>
 
     <dependencies>
-        <!-- Spigot API 1.8.8 (covers 1.8.9) -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
@@ -40,7 +38,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
         <dependency>
             <groupId>net.md-5</groupId>
             <artifactId>bungeecord-chat</artifactId>

@@ -1,11 +1,12 @@
-# ========================================
-# DrawMyThing Configuration
-# ========================================
-
-# Toggle pencil/eraser sound effects
+# 铅笔/橡皮擦音效
 tool-sound: true
-
-# Word list for the drawing game
+# 强制晴天
+force-clear-weather: true
+# 不掉饱食度
+no-hunger: true
+# 不受伤害
+no-damage: true
+# 词库
 words:
   - motorbike
   - noodle
@@ -42,3 +43,103 @@ words:
   - tree
   - smile
   - watch
+
+item:
+  leave:
+    material: BED
+    data: 14
+    slot: 8
+    name: '&c返回大厅'
+    lore:
+      - '&7点击返回大厅'
+  pencil:
+    material: STICK
+    data: 0
+    slot: 0
+    name: '&b铅笔'
+    lore:
+      - '&7右键方块进行绘画'
+  big-pencil:
+    material: BLAZE_ROD
+    data: 0
+    slot: 1
+    name: '&e大号铅笔'
+    lore:
+      - '&7右键方块进行十字绘画'
+  eraser:
+    material: WOOL
+    data: 14
+    slot: 2
+    name: '&c橡皮擦'
+    lore:
+      - '&7右键方块擦除为白色'
+  color-picker:
+    material: COMPASS
+    data: 0
+    slot: 3
+    name: '&a选择颜色'
+    lore:
+      - '&7右键打开颜色选择'
+
+color-picker:
+  title: '选择画笔颜色'
+  colors:
+    - {wool: 0, name: '&f白色', slot: 0}
+    - {wool: 1, name: '&6橙色', slot: 1}
+    - {wool: 2, name: '&5品红色', slot: 2}
+    - {wool: 3, name: '&b淡蓝色', slot: 3}
+    - {wool: 4, name: '&e黄色', slot: 4}
+    - {wool: 5, name: '&a黄绿色', slot: 5}
+    - {wool: 6, name: '&d粉红色', slot: 6}
+    - {wool: 7, name: '&8灰色', slot: 7}
+    - {wool: 8, name: '&7淡灰色', slot: 8}
+    - {wool: 9, name: '&3青色', slot: 9}
+    - {wool: 10, name: '&5紫色', slot: 10}
+    - {wool: 11, name: '&9蓝色', slot: 11}
+    - {wool: 12, name: '&6棕色', slot: 12}
+    - {wool: 13, name: '&2绿色', slot: 13}
+    - {wool: 14, name: '&c红色', slot: 14}
+    - {wool: 15, name: '&0黑色', slot: 15}
+
+beforestart:
+  time: 10
+  broadcast:
+    sound: 'ORB_PICKUP,1,1'
+    title: '&6&l游戏将在 %time% 秒后开始,20,40,20'
+  showtime: [10, 5, 4, 3, 2, 1]
+
+game:
+  round-time: 75
+  hints:
+    - 40
+    - 50
+    - 55
+  actionbar: '&f&l提示 &r&f- %tip%'
+  builder-teleport-delay: 1
+
+tip:
+  splice: ' '
+  hide: '_'
+
+scoreboard:
+  waiting:
+    refresh: 20
+    title: '&6等待中'
+    content:
+      - ''
+      - '&7玩家: &f%count%/%max%'
+      - ''
+      - '&7状态: &a等待开始'
+      - ''
+  gaming:
+    refresh: 20
+    title: '&6分数'
+    content:
+      - ''
+      - '&a%player%: &e%score%'
+      - ''
+
+autojoin:
+  enabled: false
+  randomjoin: false
+  joingame: ''

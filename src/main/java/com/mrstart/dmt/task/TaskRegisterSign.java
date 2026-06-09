@@ -4,22 +4,17 @@ import com.mrstart.dmt.game.Game;
 import org.bukkit.block.Block;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class TaskRegisterSign extends BukkitRunnable
-{
+public class TaskRegisterSign extends BukkitRunnable {
+    private final Block block;
+    private final Game game;
+    private final String display;
 
-    public TaskRegisterSign(Block b, Game bz, String display)
-    {
-        this.b = b;
-        this.bz = bz;
+    public TaskRegisterSign(Block block, Game game, String display) {
+        this.block = block;
+        this.game = game;
         this.display = display;
     }
 
-    public void run()
-    {
-        bz.registerSign(b, display);
-    }
-
-    private Block b;
-    private Game bz;
-    private String display;
+    @Override
+    public void run() { game.registerSign(block, display); }
 }
