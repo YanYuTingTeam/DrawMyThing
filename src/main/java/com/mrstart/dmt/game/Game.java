@@ -171,11 +171,13 @@ public class Game {
     public List<Player> getPlayers() { return new ArrayList<Player>(score.keySet()); }
 
     public void sendMessage(String message) {
-        for (Player p : score.keySet()) ChatUtil.send(p, message);
+        String replaced = colorize(replacePlaceholders(message, null));
+        for (Player p : score.keySet()) p.sendMessage(replaced);
     }
 
     public void sendMsg(String key, String... replacements) {
         String msg = ChatUtil.getMessage(key, replacements);
+        msg = replacePlaceholders(msg, null);
         if (msg.contains("\n")) {
             String[] lines = msg.split("\n");
             for (Player p : score.keySet()) {
@@ -422,7 +424,7 @@ public class Game {
         sendGuessedTitle(player);
         playerFound++;
         if (playerFound >= players - 1) {
-            sendMsg("all-found-next");
+            sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
             cancelTasks();
             TaskNextRound endRound = new TaskNextRound(this);
             endRound.runTaskLater(instance, 100L); tasks.add(endRound);
@@ -478,13 +480,13 @@ public class Game {
             }
         }
 
-        sendMessage(ChatUtil.getMessage("game-over"));
+        sendMsg("game-over");
         Player winner = null;
         for (Player p : score.keySet()) { if (winner == null || score.get(p) > score.get(winner)) winner = p; }
         if (winner != null) {
-            sendMessage(ChatUtil.getMessage("scores-label"));
-            for (Player p : score.keySet()) sendMessage(ChatUtil.getMessage("score-line", "%player%", p.getName(), "%score%", String.valueOf(score.get(p))));
-            sendMessage(ChatUtil.getMessage("winner", "%player%", winner.getName()));
+            sendMsg("scores-label");
+            for (Player p : score.keySet()) sendMsg("score-line", "%player%", p.getName(), "%score%", String.valueOf(score.get(p)));
+            sendMsg("winner", "%player%", winner.getName());
         }
         stop();
     }
@@ -649,6 +651,8 @@ public class Game {
         started = false; waiting = false; countdownStartTime = 0; cancelTasks(); stopScoreboardTask();
         if (objective != null) { objective.unregister(); objective = null; }
         clearScoreboardTeams();
+        builder = null; word = null; wordf = null;
+        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);
