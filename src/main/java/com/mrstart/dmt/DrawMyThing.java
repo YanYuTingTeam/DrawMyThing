@@ -134,8 +134,8 @@ public class DrawMyThing extends JavaPlugin {
         leaveItem = buildItemFromConfig("item.leave", Material.BED, (short) 14, "&c返回大厅", null);
         pencilItem = buildItemFromConfig("item.pencil", Material.STICK, (short) 0, "&b铅笔", null);
         bigPencilItem = buildItemFromConfig("item.big-pencil", Material.BLAZE_ROD, (short) 0, "&e大号铅笔", null);
-        eraserItem = buildItemFromConfig("item.eraser", Material.WOOL, (short) 14, "&c橡皮擦", null);
-        colorPickerItem = buildItemFromConfig("item.color-picker", Material.COMPASS, (short) 0, "&a选择颜色", null);
+        eraserItem = buildItemFromConfig("item.eraser", Material.WOOL, (short) 14, "&c清空画布", null);
+        colorPickerItem = buildItemFromConfig("item.color-picker", Material.COMPASS, (short) 0, "&a一键填充", null);
     }
 
     private ItemStack buildItemFromConfig(String path, Material defMat, short defData, String defName, List<String> defLore) {

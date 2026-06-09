@@ -70,19 +70,19 @@ item:
     material: TNT
     data: 14
     slot: 2
-    name: '&c橡皮擦'
+    name: '&c清空画布(右键清空)'
     lore:
-      - '&7右键方块擦除为白色'
+      - '&7右键清空画布'
   color-picker:
     material: BUCKET
     data: 0
     slot: 3
-    name: '&a选择颜色'
+    name: '&9填充画布(右键填充)'
     lore:
-      - '&7右键打开颜色选择'
+      - '&7右键用选中的颜色填充画布'
 
 color-picker:
-  title: '选择画笔颜色'
+  title: '&4&l选择颜色'
   colors:
     - {wool: 0, name: '&f白色', slot: 0}
     - {wool: 1, name: '&6橙色', slot: 1}
