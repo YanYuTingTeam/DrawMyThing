@@ -246,6 +246,9 @@ game:
   actionbar: '&f&l提示 &r&f- %tip%'
   builder-actionbar: '&e&l题目: &r&f%paintname%'
   builder-teleport-delay: 0
+  builderToPlanter: 
+    time: 5
+    sound: 'NOTE_BASS,1,1'
   started:
     title: ''
     subtitle: ''

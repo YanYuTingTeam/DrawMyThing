@@ -32,6 +32,7 @@ public class GameListener implements Listener {
     private DrawMyThing instance;
     private Map<Player, BukkitTask> paintTasks = new HashMap<Player, BukkitTask>();
     private Map<Player, Block> lastPaintedBlock = new HashMap<Player, Block>();
+    private Map<Player, Long> freezeSoundCooldown = new HashMap<Player, Long>();
 
     public GameListener(DrawMyThing instance) {
         this.instance = instance;
@@ -41,6 +42,7 @@ public class GameListener implements Listener {
     public void onPlayerLogOut(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         cancelPaintTask(player);
+        freezeSoundCooldown.remove(player);
         if (player.hasMetadata("inbmt")) {
             String gameName = getMeta(player, "inbmt");
             Game game = instance.getGameByName(gameName);
@@ -67,6 +69,34 @@ public class GameListener implements Listener {
                 }
             }
         }.runTaskLater(instance, 5L);
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        if (!isInGame(player)) return;
+        Game game = getGame(player);
+        if (game == null || !game.isStarted()) return;
+        if (game.getBuilder() == null || !game.getBuilder().equals(player)) return;
+        long freezeEnd = game.getBuilderFreezeEndTime();
+        if (freezeEnd <= 0 || System.currentTimeMillis() >= freezeEnd) return;
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
+                && event.getFrom().getBlockY() == event.getTo().getBlockY()
+                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
+        event.setTo(event.getFrom());
+        long now = System.currentTimeMillis();
+        Long last = freezeSoundCooldown.get(player);
+        if (last == null || now - last >= 500) {
+            freezeSoundCooldown.put(player, now);
+            String soundStr = instance.getConfig().getString("game.builderToPlanter.sound", "NOTE_BASS,1,1");
+            try {
+                String[] sp = soundStr.split(",");
+                Sound sound = Sound.valueOf(sp[0].trim());
+                float volume = sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f;
+                float pitch = sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f;
+                player.playSound(player.getLocation(), sound, volume, pitch);
+            } catch (Exception ignored) {}
+        }
     }
 
     @EventHandler

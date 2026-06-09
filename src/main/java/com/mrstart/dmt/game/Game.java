@@ -54,6 +54,7 @@ public class Game {
     private long aftergameStartTime = 0;
     private int aftergameDuration = 0;
     private long roundEndTime = 0;
+    private long builderFreezeEndTime = 0;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
     private boolean acceptWords = true;
     private List<Block> signs = new ArrayList<Block>();
@@ -114,6 +115,7 @@ public class Game {
     public boolean isAftergameRunning() { return aftergameRunning; }
     public int getAftergameRemaining() { return getEndTime(); }
     public long getRoundEndTime() { return roundEndTime; }
+    public long getBuilderFreezeEndTime() { return builderFreezeEndTime; }
 
     /**
      * 统一占位符替换（不做着色，着色由调用方处理）
@@ -564,6 +566,8 @@ public class Game {
         hasBeenBuilder.put(p, hasBeenBuilder.get(p) + 1);
         final Player fp = p;
         int delay = instance.getConfig().getInt("game.builder-teleport-delay", 1);
+        int freezeTime = instance.getConfig().getInt("game.builderToPlanter.time", 0);
+        builderFreezeEndTime = freezeTime > 0 ? System.currentTimeMillis() + (delay + freezeTime) * 1000L : 0;
         new BukkitRunnable() {
             public void run() {
                 if (bspawn != null) fp.teleport(bspawn);
@@ -699,7 +703,7 @@ public class Game {
     }
 
     public void stop() {
-        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
+        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
         hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
