@@ -16,6 +16,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.server.ServerListPingEvent;
@@ -39,6 +40,27 @@ public class GameListener implements Listener {
     public GameListener(DrawMyThing instance) {
         this.instance = instance;
     }
+
+    @EventHandler
+    public void onPlayerLogin(PlayerLoginEvent event) {
+        if (!instance.isBungeeMode()) return;
+        List<Game> games = instance.getGames();
+        if (games.isEmpty()) return;
+        Game game = games.get(0);
+        if (game.isStarted()) {
+            if (game.isAftergameRunning()) {
+                String msg = instance.getConfig().getString("kick.ending", "&c游戏正在结束, 无法加入");
+                event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatUtil.colorize(msg));
+            } else {
+                String msg = instance.getConfig().getString("kick.start", "&c游戏已开始, 无法加入");
+                event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatUtil.colorize(msg));
+            }
+        } else if (game.getPlayerCount() >= game.getMaxPlayers()) {
+            String msg = instance.getConfig().getString("kick.full", "&c房间已满, 无法加入");
+            event.disallow(PlayerLoginEvent.Result.KICK_FULL, ChatUtil.colorize(msg));
+        }
+    }
+
 
     @EventHandler
     public void onServerPing(ServerListPingEvent event) {

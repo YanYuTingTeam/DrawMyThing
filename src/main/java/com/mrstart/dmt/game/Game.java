@@ -174,34 +174,7 @@ public class Game {
     }
 
     public void join(Player player) {
-        if (started) {
-            if (instance.isBungeeMode()) {
-                String kickMsg = instance.getConfig().getString("kick.start", "&c游戏已开始, 你被迫下线");
-                player.kickPlayer(ChatUtil.colorize(kickMsg));
-            } else {
-                ChatUtil.sendMsg(player, "game-already-started");
-            }
-            return;
-        }
-        if (score.containsKey(player)) { ChatUtil.sendMsg(player, "already-in-game"); return; }
-        if (aftergameRunning) {
-            if (instance.isBungeeMode()) {
-                String kickMsg = instance.getConfig().getString("kick.ending", "&c游戏正在结束, 无法加入");
-                player.kickPlayer(ChatUtil.colorize(kickMsg));
-            } else {
-                ChatUtil.sendMsg(player, "game-already-started");
-            }
-            return;
-        }
-        if (players >= maxplayers) {
-            if (instance.isBungeeMode()) {
-                String kickMsg = instance.getConfig().getString("kick.full", "&c房间已满, 你被迫下线");
-                player.kickPlayer(ChatUtil.colorize(kickMsg));
-            } else {
-                ChatUtil.sendMsg(player, "game-full");
-            }
-            return;
-        }
+        if (started || aftergameRunning || players >= maxplayers || score.containsKey(player)) return;
         player.setMetadata("oldLoc", new org.bukkit.metadata.FixedMetadataValue(instance, LocationUtil.LocationToString(player.getLocation())));
         Location teleportTarget = lobby != null ? lobby : spawn;
         if (teleportTarget != null) player.teleport(teleportTarget);
