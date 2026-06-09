@@ -523,8 +523,9 @@ public class Game {
             Object craftServer = Bukkit.getServer();
             java.lang.reflect.Method getHandle = craftServer.getClass().getMethod("getHandle");
             Object dedicatedServer = getHandle.invoke(craftServer);
-            java.lang.reflect.Method setMotd = dedicatedServer.getClass().getMethod("setMotd", String.class);
-            setMotd.invoke(dedicatedServer, motd);
+            java.lang.reflect.Field motdField = dedicatedServer.getClass().getSuperclass().getDeclaredField("motd");
+            motdField.setAccessible(true);
+            motdField.set(dedicatedServer, motd);
         } catch (Exception ignored) {}
     }
 
