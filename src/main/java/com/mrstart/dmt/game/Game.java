@@ -366,7 +366,7 @@ public class Game {
         roundGainedScore.clear();
         acceptWords = true;
         word = getNewWord();
-        wordf = new StringBuilder(word.replaceAll("[a-zA-Z]", "_"));
+        wordf = new StringBuilder(word.replaceAll(".", "_"));
 
         if (buildzone != null) {
             buildzone.clear();

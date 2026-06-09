@@ -232,7 +232,7 @@ game:
   started:
     title: ''
     subtitle: ''
-    sound: 'NOTE_PLING,1,1'
+    sound: 'NOTE_PLING,1,2'
     fade-in: 0
     stay: 0
     fade-out: 0

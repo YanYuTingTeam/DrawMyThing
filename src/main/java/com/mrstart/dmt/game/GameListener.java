@@ -197,7 +197,7 @@ public class GameListener implements Listener {
             return;
         }
 
-        if (isEraserItem(item) && action == Action.RIGHT_CLICK_AIR) {
+        if (isEraserItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             CuboidZone zone = game.getBuildZone();
             if (zone != null) zone.setWool(DyeColor.WHITE);
             cancelPaintTask(player);
