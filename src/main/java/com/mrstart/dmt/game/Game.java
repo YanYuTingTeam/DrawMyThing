@@ -48,6 +48,7 @@ public class Game {
     private boolean waiting = false;
     private boolean wordHasBeenFound = false;
     private int playerFound = 0;
+    private int hintCount = 0;
     private long countdownStartTime = 0;
     private int countdownDuration = 0;
     private boolean aftergameRunning = false;
@@ -316,6 +317,7 @@ public class Game {
         cancelTasks();
         wordHasBeenFound = false;
         playerFound = 0;
+        hintCount = 0;
         hasFound.clear();
         roundGainedScore.clear();
         acceptWords = true;
@@ -366,6 +368,14 @@ public class Game {
 
     public void addRandomLetter() {
         if (word == null || wordf == null) return;
+        int len = word.length();
+        int maxHints;
+        if (len <= 2) return;
+        else if (len == 3) maxHints = 1;
+        else if (len <= 6) maxHints = 2;
+        else maxHints = 3;
+        if (hintCount >= maxHints) return;
+        hintCount++;
         Random r = new Random();
         int idx = r.nextInt(word.length());
         wordf.setCharAt(idx, word.charAt(idx));
@@ -538,7 +548,7 @@ public class Game {
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
-        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear();
+        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear(); hintCount = 0;
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);
