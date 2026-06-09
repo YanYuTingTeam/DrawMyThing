@@ -115,6 +115,7 @@ game:
     - 50
     - 55
   actionbar: '&f&l提示 &r&f- %tip%'
+  builder-actionbar: '&e&l题目: &r&f%paintname%'
   builder-teleport-delay: 1
 
 tip:

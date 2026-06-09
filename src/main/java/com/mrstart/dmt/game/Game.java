@@ -49,6 +49,8 @@ public class Game {
     private boolean waiting = false;
     private boolean wordHasBeenFound = false;
     private int playerFound = 0;
+    private long countdownStartTime = 0;
+    private int countdownDuration = 0;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
     private boolean acceptWords = true;
     private List<Block> signs = new ArrayList<Block>();
@@ -97,6 +99,35 @@ public class Game {
     public void setRegion(String region) { this.region = region; }
     public void setNotAcceptWords() { this.acceptWords = false; }
     public boolean hasFound(Player player) { return hasFound.contains(player); }
+
+    public int getStartTime() {
+        if (!waiting || started) return 0;
+        int elapsed = (int) ((System.currentTimeMillis() - countdownStartTime) / 1000);
+        int remaining = countdownDuration - elapsed;
+        return remaining > 0 ? remaining : 0;
+    }
+
+    /**
+     * 统一占位符替换（不做着色，着色由调用方处理）
+     */
+    public String replacePlaceholders(String template, Player player) {
+        if (template == null) return "";
+        String result = template;
+        result = result.replace("%game%", name);
+        result = result.replace("%count%", String.valueOf(players));
+        result = result.replace("%max%", String.valueOf(maxplayers));
+        result = result.replace("%min%", String.valueOf(minplayers));
+        result = result.replace("%starttime%", String.valueOf(getStartTime()));
+        if (player != null) {
+            result = result.replace("%player%", player.getName());
+            if (score.containsKey(player)) result = result.replace("%score%", String.valueOf(score.get(player)));
+        }
+        if (word != null) {
+            result = result.replace("%paintname%", word);
+            result = result.replace("%tip%", player != null ? getTipText(player) : getTipText(null));
+        }
+        return result;
+    }
 
     public Location getPaintingPos1() { return paintingPos1; }
     public Location getPaintingPos2() { return paintingPos2; }
@@ -200,20 +231,21 @@ public class Game {
         startWaitingScoreboard();
         if (players >= minplayers && !waiting) {
             waiting = true;
+            countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
+            countdownStartTime = System.currentTimeMillis();
             startStartingScoreboard();
-            sendMsg("game-starting", "%time%", String.valueOf(instance.getConfig().getInt("beforestart.time", 10)));
-            int countdownTime = instance.getConfig().getInt("beforestart.time", 10);
+            sendMsg("game-starting", "%time%", String.valueOf(countdownDuration));
             TaskStart startTask = new TaskStart(this);
-            startTask.runTaskLater(instance, countdownTime * 20L);
+            startTask.runTaskLater(instance, countdownDuration * 20L);
             tasks.add(startTask);
-            startCountdownBroadcast(countdownTime);
+            startCountdownBroadcast(countdownDuration);
         }
         updateSigns();
     }
 
     public void leave(Player player) {
         if (!score.containsKey(player)) return;
-        if (!started && players == maxplayers) { cancelTasks(); waiting = false; }
+        if (!started && players == maxplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; }
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
@@ -241,8 +273,8 @@ public class Game {
 
         if (players > 0) sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         if (started && players <= 1) { cancelTasks(); stop(); }
-        if (players <= 0) { waiting = false; stopScoreboardTask(); }
-        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; startWaitingScoreboard(); }
+        if (players <= 0) { waiting = false; countdownStartTime = 0; stopScoreboardTask(); }
+        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; startWaitingScoreboard(); }
     }
 
     public void start() {
@@ -250,6 +282,7 @@ public class Game {
         cancelTasks();
         started = true;
         waiting = false;
+        countdownStartTime = 0;
         word = null;
         if (players < 3) buildPerPlayer = 3;
         hasBeenBuilder.clear();
@@ -432,13 +465,12 @@ public class Game {
 
     private void updateWaitingScoreboard() {
         for (String entry : board.getEntries()) board.resetScores(entry);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中")));
+        objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.waiting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a等待开始", "");
         int scoreVal = content.size();
         for (String line : content) {
-            line = line.replace("%count%", String.valueOf(players)).replace("%max%", String.valueOf(maxplayers)).replace("%game%", name);
-            line = colorize(line);
+            line = colorize(replacePlaceholders(line, null));
             String entry = line.length() > 16 ? line.substring(0, 16) : line;
             objective.getScore(entry).setScore(scoreVal--);
         }
@@ -446,13 +478,12 @@ public class Game {
 
     private void updateStartingScoreboard() {
         for (String entry : board.getEntries()) board.resetScores(entry);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.starting.title", "&6开始中")));
+        objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.starting.title", "&6开始中"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.starting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a即将开始", "");
         int scoreVal = content.size();
         for (String line : content) {
-            line = line.replace("%count%", String.valueOf(players)).replace("%max%", String.valueOf(maxplayers)).replace("%game%", name);
-            line = colorize(line);
+            line = colorize(replacePlaceholders(line, null));
             String entry = line.length() > 16 ? line.substring(0, 16) : line;
             objective.getScore(entry).setScore(scoreVal--);
         }
@@ -460,7 +491,7 @@ public class Game {
 
     private void updateGamingScoreboard() {
         for (String entry : board.getEntries()) board.resetScores(entry);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.gaming.title", "&6分数")));
+        objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.gaming.title", "&6分数"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.gaming.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&a%player%: &e%score%", "");
         List<Map.Entry<Player, Integer>> sorted = new ArrayList<Map.Entry<Player, Integer>>(score.entrySet());
@@ -471,12 +502,12 @@ public class Game {
         for (String line : content) {
             if (line.contains("%player%") && line.contains("%score%")) {
                 for (Map.Entry<Player, Integer> e : sorted) {
-                    String pl = colorize(line.replace("%player%", e.getKey().getName()).replace("%score%", String.valueOf(e.getValue())).replace("%game%", name));
+                    String pl = colorize(replacePlaceholders(line, e.getKey()));
                     String key = pl.length() > 16 ? pl.substring(0, 16) : pl;
                     objective.getScore(key).setScore(scoreVal--);
                 }
             } else {
-                String f = colorize(line.replace("%game%", name));
+                String f = colorize(replacePlaceholders(line, null));
                 String key = f.length() > 16 ? f.substring(0, 16) : f;
                 objective.getScore(key).setScore(scoreVal--);
             }
@@ -521,7 +552,7 @@ public class Game {
     }
 
     public void stop() {
-        started = false; waiting = false; cancelTasks(); stopScoreboardTask();
+        started = false; waiting = false; countdownStartTime = 0; cancelTasks(); stopScoreboardTask();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);

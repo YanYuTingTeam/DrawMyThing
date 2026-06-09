@@ -19,12 +19,14 @@ public class TaskActionBar extends BukkitRunnable {
     public void run() {
         if (!game.isStarted()) { cancel(); return; }
 
-        String template = plugin.getConfig().getString("game.actionbar", "&f&l提示 &r&f- %tip%");
+        String builderTemplate = plugin.getConfig().getString("game.builder-actionbar", null);
+        String defaultTemplate = plugin.getConfig().getString("game.actionbar", "&f&l提示 &r&f- %tip%");
 
         for (Player p : game.getPlayers()) {
             if (p.isOnline()) {
-                String tip = game.getTipText(p);
-                String actionBar = template.replace("%tip%", tip);
+                boolean isBuilder = game.getBuilder() != null && game.getBuilder().equals(p);
+                String template = (isBuilder && builderTemplate != null) ? builderTemplate : defaultTemplate;
+                String actionBar = game.replacePlaceholders(template, p);
                 ChatUtil.sendActionBar(p, actionBar);
             }
         }
