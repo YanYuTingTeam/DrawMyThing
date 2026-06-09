@@ -174,21 +174,6 @@ public class GameListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        if (!isInGame(player)) return;
-        Game game = getGame(player);
-        if (game == null || !game.isStarted()) return;
-        if (game.getBuilder() != null && game.getBuilder().equals(player)) {
-            if (event.getTo() == null) return;
-            if (event.getTo().getX() == event.getFrom().getX() &&
-                event.getTo().getY() == event.getFrom().getY() &&
-                event.getTo().getZ() == event.getFrom().getZ()) return;
-            event.setTo(event.getFrom());
-        }
-    }
-
-    @EventHandler
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
         if (isInGame(player) && !event.getMessage().startsWith("/dmt") && !player.hasPermission("dmt.admin")) {
