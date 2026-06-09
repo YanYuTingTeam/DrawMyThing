@@ -155,7 +155,17 @@ public class Game {
 
     public void sendMsg(String key, String... replacements) {
         String msg = ChatUtil.getMessage(key, replacements);
-        for (Player p : score.keySet()) p.sendMessage(ChatUtil.getPrefix() + msg);
+        if (msg.contains("\n")) {
+            String[] lines = msg.split("\n");
+            for (Player p : score.keySet()) {
+                p.sendMessage(ChatUtil.getPrefix() + lines[0]);
+                for (int i = 1; i < lines.length; i++) {
+                    p.sendMessage(lines[i]);
+                }
+            }
+        } else {
+            for (Player p : score.keySet()) p.sendMessage(ChatUtil.getPrefix() + msg);
+        }
     }
 
     public void playSoundForAll(Sound sound, float volume, float pitch) {

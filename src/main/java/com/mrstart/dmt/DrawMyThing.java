@@ -452,18 +452,18 @@ public class DrawMyThing extends JavaPlugin {
     }
 
     private void sendHelp(Player player) {
-        player.sendMessage(ChatUtil.getMessage("help-title"));
+        ChatUtil.sendMessage(player, "help-title");
         if (player.hasPermission("dmt.admin")) {
-            player.sendMessage(ChatUtil.getMessage("help-admin-create"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-delete"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-pos1"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-pos2"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-spawn"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-bspawn"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-lobby"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-min"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-max"));
-            player.sendMessage(ChatUtil.getMessage("help-admin-reload"));
+            ChatUtil.sendMessage(player, "help-admin-create");
+            ChatUtil.sendMessage(player, "help-admin-delete");
+            ChatUtil.sendMessage(player, "help-admin-pos1");
+            ChatUtil.sendMessage(player, "help-admin-pos2");
+            ChatUtil.sendMessage(player, "help-admin-spawn");
+            ChatUtil.sendMessage(player, "help-admin-bspawn");
+            ChatUtil.sendMessage(player, "help-admin-lobby");
+            ChatUtil.sendMessage(player, "help-admin-min");
+            ChatUtil.sendMessage(player, "help-admin-max");
+            ChatUtil.sendMessage(player, "help-admin-reload");
         }
     }
 

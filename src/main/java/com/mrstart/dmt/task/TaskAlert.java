@@ -23,7 +23,15 @@ public class TaskAlert extends BukkitRunnable {
     public void run() {
         for (Player p : sendTo) {
             if (p.isOnline()) {
-                p.sendMessage(ChatUtil.getPrefix() + message);
+                if (message.contains("\n")) {
+                    String[] lines = message.split("\n");
+                    p.sendMessage(ChatUtil.getPrefix() + lines[0]);
+                    for (int i = 1; i < lines.length; i++) {
+                        p.sendMessage(lines[i]);
+                    }
+                } else {
+                    p.sendMessage(ChatUtil.getPrefix() + message);
+                }
             }
         }
     }

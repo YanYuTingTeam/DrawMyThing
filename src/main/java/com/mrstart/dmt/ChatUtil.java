@@ -4,6 +4,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 public class ChatUtil {
 
@@ -26,13 +27,44 @@ public class ChatUtil {
     }
 
     public static void send(Player player, String message) {
-        player.sendMessage(getPrefix() + colorize(message));
+        String colored = colorize(message);
+        if (colored.contains("\n")) {
+            String[] lines = colored.split("\n");
+            player.sendMessage(getPrefix() + lines[0]);
+            for (int i = 1; i < lines.length; i++) {
+                player.sendMessage(lines[i]);
+            }
+        } else {
+            player.sendMessage(getPrefix() + colored);
+        }
+    }
+
+    public static void sendMessage(Player player, String key, String... replacements) {
+        String msg = getMessage(key, replacements);
+        if (msg.contains("\n")) {
+            for (String line : msg.split("\n")) {
+                player.sendMessage(line);
+            }
+        } else {
+            player.sendMessage(msg);
+        }
     }
 
     public static String getMessage(String key, String... replacements) {
         if (plugin == null) return key;
-        String msg = plugin.getMsgConfig().getString(key, key);
-        msg = colorize(msg);
+        Object raw = plugin.getMsgConfig().get(key);
+        String msg;
+        if (raw instanceof List) {
+            List<?> list = (List<?>) raw;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append("\n");
+                sb.append(list.get(i).toString());
+            }
+            msg = colorize(sb.toString());
+        } else {
+            msg = colorize(raw != null ? raw.toString() : key);
+        }
         for (int i = 0; i < replacements.length - 1; i += 2) {
             msg = msg.replace(replacements[i], replacements[i + 1]);
         }
@@ -40,7 +72,16 @@ public class ChatUtil {
     }
 
     public static void sendMsg(Player player, String key, String... replacements) {
-        player.sendMessage(getPrefix() + getMessage(key, replacements));
+        String msg = getMessage(key, replacements);
+        if (msg.contains("\n")) {
+            String[] lines = msg.split("\n");
+            player.sendMessage(getPrefix() + lines[0]);
+            for (int i = 1; i < lines.length; i++) {
+                player.sendMessage(lines[i]);
+            }
+        } else {
+            player.sendMessage(getPrefix() + msg);
+        }
     }
 
     private static String nmsVersion = null;
