@@ -478,7 +478,7 @@ public class GameListener implements Listener {
 
     public void setPencilColor(DyeColor color) { this.pencilColor = color; }
     public DyeColor getColor() { return pencilColor; }
-    public void resetColor() { this.pencilColor = DyeColor.WHITE; }
+    public void resetColor() { this.pencilColor = DyeColor.BLACK; }
     
     private void playPencilSound(Player player) {
         if (!instance.getConfig().getBoolean("tool-sound", true)) return;
