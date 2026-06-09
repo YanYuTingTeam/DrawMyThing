@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 public class GameListener implements Listener {
-    private DyeColor pencilColor = DyeColor.WHITE;
+    private DyeColor pencilColor = DyeColor.BLACK;
     private DrawMyThing instance;
     private Map<Player, BukkitTask> paintTasks = new HashMap<Player, BukkitTask>();
     private Map<Player, Block> lastPaintedBlock = new HashMap<Player, Block>();

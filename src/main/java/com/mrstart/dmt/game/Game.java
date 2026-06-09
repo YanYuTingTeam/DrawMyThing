@@ -15,7 +15,6 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.scoreboard.*;
 import java.util.*;
 
 public class Game {
@@ -31,7 +30,6 @@ public class Game {
     private String region;
 
     private Map<Player, Integer> score = new HashMap<Player, Integer>();
-    private Map<Player, Boolean> ready = new HashMap<Player, Boolean>();
     private Map<Player, Integer> hasBeenBuilder = new HashMap<Player, Integer>();
     private Map<Player, ItemStack[]> inventories = new HashMap<Player, ItemStack[]>();
     private Map<Player, GameMode> gamemode = new HashMap<Player, GameMode>();
@@ -43,7 +41,7 @@ public class Game {
     private int players = 0;
     private int minplayers = 2;
     private int maxplayers = 12;
-    private int buildPerPlayer = 2;
+    private int round = 2;
     private int roundCount = 0;
     private String word;
     private StringBuilder wordf;
@@ -60,11 +58,7 @@ public class Game {
     private boolean acceptWords = true;
     private List<Block> signs = new ArrayList<Block>();
 
-    private ScoreboardManager manager;
-    private Scoreboard board;
-    private Objective objective;
-    private BukkitTask scoreboardTask = null;
-    private int objectiveIndex = 0;
+    private GameScoreboard scoreboard;
 
     public Game(CuboidZone build, Location spawn, Location bspawn, String name, String region, DrawMyThing instance) {
         this.buildzone = build;
@@ -73,39 +67,10 @@ public class Game {
         this.name = name;
         this.region = region;
         this.instance = instance;
-
-        manager = Bukkit.getScoreboardManager();
-        board = manager.getNewScoreboard();
-        objective = board.registerNewObjective(name + "_points", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.gaming.title", "&6分数")));
+        this.scoreboard = new GameScoreboard(this, instance);
     }
 
     private String colorize(String s) { return ChatUtil.colorize(s); }
-
-    private void clearScoreboardTeams() {
-        for (Team t : board.getTeams()) {
-            for (String e : t.getEntries()) board.resetScores(e);
-            t.unregister();
-        }
-    }
-
-    private void addTeamEntry(String display, int scoreVal) {
-        String invisible = "§" + (char) ('0' + (objectiveIndex % 10));
-        objectiveIndex++;
-        Team t = board.registerNewTeam("t" + objectiveIndex);
-        if (display.length() <= 16) {
-            t.setPrefix(display);
-            t.setSuffix("");
-        } else {
-            int split = 16;
-            if (split > 0 && display.charAt(split - 1) == '§') split--;
-            t.setPrefix(display.substring(0, split));
-            t.setSuffix(display.substring(split));
-        }
-        t.addEntry(invisible);
-        objective.getScore(invisible).setScore(scoreVal);
-    }
 
     public String getName() { return name; }
     public String getRegion() { return region; }
@@ -130,13 +95,15 @@ public class Game {
     public void setNotAcceptWords() { this.acceptWords = false; }
     public boolean hasFound(Player player) { return hasFound.contains(player); }
 
+    public Map<Player, Integer> getScoreMap() { return score; }
+
     public int getStartTime() {
         if (!waiting || started) return 0;
         int elapsed = (int) ((System.currentTimeMillis() - countdownStartTime) / 1000);
         int remaining = countdownDuration - elapsed;
         return remaining > 0 ? remaining : 0;
     }
-    
+
     public int getEndTime() {
         if (!aftergameRunning) return 0;
         int elapsed = (int) ((System.currentTimeMillis() - aftergameStartTime) / 1000);
@@ -157,7 +124,7 @@ public class Game {
         result = result.replace("%starttime%", String.valueOf(getStartTime()));
         result = result.replace("%endtime%", String.valueOf(getEndTime()));
         result = result.replace("%round_now%", String.valueOf(roundCount));
-        result = result.replace("%round_all%", String.valueOf(buildPerPlayer * score.size()));
+        result = result.replace("%round_all%", String.valueOf(round * score.size()));
         if (builder != null) {
             result = result.replace("%builder_player%", builder.getName());
         }
@@ -172,6 +139,27 @@ public class Game {
             result = result.replace("%tip%", player != null ? getTipText(player) : getTipText(null));
         }
         return result;
+    }
+
+    public String formatMsg(String key, Player player, String... replacements) {
+        Object raw = instance.getMsgConfig().get(key);
+        String template;
+        if (raw instanceof List) {
+            List<?> list = (List<?>) raw;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append("\n");
+                sb.append(list.get(i).toString());
+            }
+            template = sb.toString();
+        } else {
+            template = raw != null ? raw.toString() : "";
+        }
+        String msg = ChatUtil.colorize(template);
+        for (int i = 0; i < replacements.length - 1; i += 2) {
+            msg = msg.replace(replacements[i], replacements[i + 1]);
+        }
+        return replacePlaceholders(msg, player);
     }
 
     public Location getPaintingPos1() { return paintingPos1; }
@@ -194,8 +182,7 @@ public class Game {
     }
 
     public void sendMsg(String key, String... replacements) {
-        String msg = ChatUtil.getMessage(key, replacements);
-        msg = replacePlaceholders(msg, null);
+        String msg = formatMsg(key, null, replacements);
         if (msg.contains("\n")) {
             String[] lines = msg.split("\n");
             for (Player p : score.keySet()) {
@@ -282,22 +269,21 @@ public class Game {
         ChatUtil.sendTitle(player, joinTitle, joinSub, fadeIn, stay, fadeOut);
 
         player.setMetadata("inbmt", new org.bukkit.metadata.FixedMetadataValue(instance, getName()));
-        player.setScoreboard(board);
+        scoreboard.setPlayerScoreboard(player);
 
         score.put(player, 0);
-        ready.put(player, false);
         players++;
 
         for (Player p : score.keySet()) {
             ChatUtil.sendMsg(p, "player-joined", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         }
 
-        startWaitingScoreboard();
+        scoreboard.startWaitingScoreboard();
         if (players >= minplayers && !waiting) {
             waiting = true;
             countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
             countdownStartTime = System.currentTimeMillis();
-            startStartingScoreboard();
+            scoreboard.startStartingScoreboard();
             sendMsg("game-starting", "%time%", String.valueOf(countdownDuration));
             TaskStart startTask = new TaskStart(this);
             startTask.runTaskLater(instance, countdownDuration * 20L);
@@ -313,7 +299,6 @@ public class Game {
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
-        ready.remove(player);
         hasBeenBuilder.remove(player);
         hasFound.remove(player);
 
@@ -324,8 +309,8 @@ public class Game {
         player.setGameMode(gamemode.containsKey(player) ? gamemode.get(player) : GameMode.SURVIVAL);
         gamemode.remove(player);
 
-        board.resetScores(player);
-        player.setScoreboard(manager.getMainScoreboard());
+        scoreboard.resetPlayerScore(player);
+        scoreboard.resetPlayerScoreboard(player);
         players--;
         if (instance.isBungeeMode()) {
             instance.sendToServer(player, instance.getBungeeLobby());
@@ -341,12 +326,12 @@ public class Game {
         if (players > 0) sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         if (started && players <= 1 && !aftergameRunning) { cancelTasks(); stop(); }
         if (players <= 0) {
-            waiting = false; countdownStartTime = 0; stopScoreboardTask();
+            waiting = false; countdownStartTime = 0; scoreboard.stopScoreboardTask();
             if (instance.isBungeeMode() && instance.getConfig().getBoolean("autojoin.full-restart", false)) {
                 Bukkit.getServer().shutdown();
             }
         }
-        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; startWaitingScoreboard(); }
+        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; scoreboard.startWaitingScoreboard(); }
     }
 
     public void start() {
@@ -356,20 +341,18 @@ public class Game {
         waiting = false;
         countdownStartTime = 0;
         word = null;
-        buildPerPlayer = instance.getConfig().getInt("game.build-per-player", 2);
-        if (players < 3) buildPerPlayer = Math.max(buildPerPlayer, 3);
+        round = instance.getConfig().getInt("game.round", 2);
+        if (players < 3) round = Math.max(round, 3);
         roundCount = 0;
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
         sendStartedBroadcast();
         startRound();
         updateSigns();
-        startGamingScoreboard();
+        scoreboard.startGamingScoreboard();
     }
 
     public void startRound() {
-        roundCount++;
-        if (word != null) sendMsg("word-was", "%word%", word);
         cancelTasks();
         wordHasBeenFound = false;
         playerFound = 0;
@@ -391,17 +374,16 @@ public class Game {
         }
 
         getNextBuilder();
+
+        if (builder == null) return;
+
         List<Integer> hints = instance.getConfig().getIntegerList("game.hints");
         if (hints == null || hints.isEmpty()) hints = Arrays.asList(40, 50, 55);
         for (int h : hints) { TaskAddLetter t = new TaskAddLetter(this); t.runTaskLater(instance, h * 20L); tasks.add(t); }
         int roundTime = instance.getConfig().getInt("game.round-time", 75);
-        TaskAlert a30 = new TaskAlert(ChatUtil.getMessage("time-warning-30"), getPlayers(), this);
-        a30.runTaskLater(instance, 30 * 20L); tasks.add(a30);
-        TaskAlert a10 = new TaskAlert(ChatUtil.getMessage("time-warning-10"), getPlayers(), this);
-        a10.runTaskLater(instance, (roundTime - 20) * 20L); tasks.add(a10);
         TaskNextRound endRound = new TaskNextRound(this);
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
-        TaskAlert endMsg = new TaskAlert(ChatUtil.getMessage("time-up", "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
+        TaskAlert endMsg = new TaskAlert(formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
         endMsg.runTaskLater(instance, (roundTime - 5) * 20L); tasks.add(endMsg);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
@@ -442,11 +424,12 @@ public class Game {
         roundGainedScore.put(player, roundGainedScore.containsKey(player) ? roundGainedScore.get(player) + gained : gained);
         sendGuessedTitle(player);
         playerFound++;
+        int allFoundDelay = instance.getConfig().getInt("game.all-found-delay", 5);
         if (playerFound >= players - 1) {
             sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
             cancelTasks();
             TaskNextRound endRound = new TaskNextRound(this);
-            endRound.runTaskLater(instance, 100L); tasks.add(endRound);
+            endRound.runTaskLater(instance, allFoundDelay * 20L); tasks.add(endRound);
         }
     }
 
@@ -465,10 +448,10 @@ public class Game {
     }
 
     private void sendStartedBroadcast() {
-        sendMsg(instance.getMsgConfig().getString("game-started", ""));
+        sendMsg("game-started");
         String title = instance.getConfig().getString("game.started.title", null);
         String subtitle = instance.getConfig().getString("game.started.subtitle", null);
-        String soundStr = instance.getConfig().getString("game.started.sound", "LEVEL_UP,1,1");
+        String soundStr = instance.getConfig().getString("game.started.sound", "NOTE_PLING,1,2");
         int fadeIn = instance.getConfig().getInt("game.started.fade-in", 0);
         int stay = instance.getConfig().getInt("game.started.stay", 40);
         int fadeOut = instance.getConfig().getInt("game.started.fade-out", 10);
@@ -477,10 +460,12 @@ public class Game {
         if (hasTitle || hasSub) {
             sendTitleToAll(hasTitle ? colorize(title) : null, hasSub ? colorize(subtitle) : null, fadeIn, stay, fadeOut);
         }
-        try {
-            String[] sp = soundStr.split(",");
-            playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
-        } catch (Exception ignored) {}
+        if (soundStr != null && !soundStr.isEmpty()) {
+            try {
+                String[] sp = soundStr.split(",");
+                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+            } catch (Exception ignored) {}
+        }
     }
 
     private void getNextBuilder() {
@@ -493,9 +478,13 @@ public class Game {
             giveWaitingItems(builder);
             builder = null;
         }
-        for (int i = 0; i < buildPerPlayer; i++) {
+        for (int i = 0; i < round; i++) {
             for (Player p : hasBeenBuilder.keySet()) {
-                if (hasBeenBuilder.get(p) <= i) { setBuilder(p); return; }
+                if (hasBeenBuilder.get(p) <= i) {
+                    roundCount++;
+                    setBuilder(p);
+                    return;
+                }
             }
         }
 
@@ -532,7 +521,12 @@ public class Game {
             }
         }
         sendMsg("round-started", "%builder_player%", p.getName());
-        ChatUtil.sendMsg(builder, "show-paintname", "%paintname%", word);
+        String showMsg = formatMsg("show-paintname", builder, "%paintname%", word);
+        if (showMsg.contains("\n")) {
+            for (String line : showMsg.split("\n")) builder.sendMessage(line);
+        } else {
+            builder.sendMessage(showMsg);
+        }
     }
 
     public void increaseScore(Player p, int value) {
@@ -541,164 +535,66 @@ public class Game {
         }
     }
 
-    private void startWaitingScoreboard() {
-        stopScoreboardTask();
-        if (objective != null) objective.unregister();
-        objectiveIndex = 0;
-        objective = board.registerNewObjective(name + "_sb", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中")));
-        int refresh = instance.getConfig().getInt("scoreboard.waiting.refresh", 20);
-        scoreboardTask = new BukkitRunnable() {
-            public void run() { if (waiting || started) { cancel(); return; } updateWaitingScoreboard(); }
-        }.runTaskTimer(instance, 5L, Math.max(refresh, 1));
-    }
-
-    private void startStartingScoreboard() {
-        stopScoreboardTask();
-        if (objective != null) objective.unregister();
-        objectiveIndex = 0;
-        objective = board.registerNewObjective(name + "_sb", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.starting.title", "&6开始中")));
-        int refresh = instance.getConfig().getInt("scoreboard.starting.refresh", 20);
-        scoreboardTask = new BukkitRunnable() {
-            public void run() { if (!waiting || started) { cancel(); return; } updateStartingScoreboard(); }
-        }.runTaskTimer(instance, 5L, Math.max(refresh, 1));
-    }
-
-    private void startGamingScoreboard() {
-        stopScoreboardTask();
-        if (objective != null) objective.unregister();
-        objectiveIndex = 0;
-        objective = board.registerNewObjective(name + "_sb", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.gameing.title", "&6分数")));
-        int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
-        scoreboardTask = new BukkitRunnable() {
-            public void run() { if (!started) { cancel(); return; } updateGamingScoreboard(); }
-        }.runTaskTimer(instance, 5L, Math.max(refresh, 1));
-    }
-
-    private void stopScoreboardTask() { if (scoreboardTask != null) { scoreboardTask.cancel(); scoreboardTask = null; } }
-
-    private void updateWaitingScoreboard() {
-        clearScoreboardTeams();
-        objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中"), null)));
-        List<String> content = instance.getConfig().getStringList("scoreboard.waiting.content");
-        if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a等待开始", "");
-        int scoreVal = content.size();
-        for (String line : content) {
-            line = colorize(replacePlaceholders(line, null));
-            addTeamEntry(line, scoreVal--);
-        }
-    }
-
-    private void updateStartingScoreboard() {
-        clearScoreboardTeams();
-        objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.starting.title", "&6开始中"), null)));
-        List<String> content = instance.getConfig().getStringList("scoreboard.starting.content");
-        if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a即将开始", "");
-        int scoreVal = content.size();
-        for (String line : content) {
-            line = colorize(replacePlaceholders(line, null));
-            addTeamEntry(line, scoreVal--);
-        }
-    }
-
-    private void updateGamingScoreboard() {
-        clearScoreboardTeams();
-        objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.gaming.title", "&6分数"), null)));
-        List<String> content = instance.getConfig().getStringList("scoreboard.gaming.content");
-        if (content == null || content.isEmpty()) content = Arrays.asList("", "&a%player%: &e%score%", "");
-        List<Map.Entry<Player, Integer>> sorted = new ArrayList<Map.Entry<Player, Integer>>(score.entrySet());
-        Collections.sort(sorted, new Comparator<Map.Entry<Player, Integer>>() {
-            public int compare(Map.Entry<Player, Integer> a, Map.Entry<Player, Integer> b) { return b.getValue() - a.getValue(); }
-        });
-        int scoreVal = content.size() * 10;
-        for (String line : content) {
-            if (line.contains("%player%") && !line.contains("%builder_player%") && line.contains("%score%")) {
-                for (Map.Entry<Player, Integer> e : sorted) {
-                    String pl = colorize(replacePlaceholders(line, e.getKey()));
-                    addTeamEntry(pl, scoreVal--);
+    private void runCountdownBroadcast(int totalTime, List<Integer> showtime, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning) {
+        if (showtime == null || showtime.isEmpty()) return;
+        for (int t : showtime) {
+            if (t > totalTime) continue;
+            final int timeLeft = t;
+            final String fs = soundStr;
+            final String ft = titleStr;
+            final String fst = subtitleStr;
+            new BukkitRunnable() {
+                public void run() {
+                    if (checkRunning ? !aftergameRunning : !waiting) { cancel(); return; }
+                    broadcastCountdown(timeLeft, fs, ft, fst, fadeIn, stay, fadeOut, timePlaceholder);
                 }
-            } else {
-                String f = colorize(replacePlaceholders(line, null));
-                addTeamEntry(f, scoreVal--);
-            }
+            }.runTaskLater(instance, (totalTime - timeLeft) * 20L);
+        }
+    }
+
+    private void broadcastCountdown(int timeLeft, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder) {
+        if (soundStr != null && !soundStr.isEmpty()) {
+            try {
+                String[] sp = soundStr.split(",");
+                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+            } catch (Exception ignored) {}
+        }
+        String title = titleStr != null ? colorize(titleStr.replace(timePlaceholder, String.valueOf(timeLeft))) : null;
+        String subtitle = subtitleStr != null ? colorize(subtitleStr.replace(timePlaceholder, String.valueOf(timeLeft))) : null;
+        if ((title != null && !title.isEmpty()) || (subtitle != null && !subtitle.isEmpty())) {
+            sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
         }
     }
 
     private void startCountdownBroadcast(int totalTime) {
         List<Integer> showtime = instance.getConfig().getIntegerList("beforestart.showtime");
         if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
-        final String soundStr = instance.getConfig().getString("beforestart.broadcast.sound", "ORB_PICKUP,1,1");
-        final String titleStr = instance.getConfig().getString("beforestart.broadcast.title", "&6&l游戏将在 %time% 秒后开始");
-        final String subtitleStr = instance.getConfig().getString("beforestart.broadcast.subtitle", null);
-        final int fadeIn = instance.getConfig().getInt("beforestart.broadcast.fade-in", 20);
-        final int stay = instance.getConfig().getInt("beforestart.broadcast.stay", 40);
-        final int fadeOut = instance.getConfig().getInt("beforestart.broadcast.fade-out", 20);
-        for (int t : showtime) {
-            if (t > totalTime) continue;
-            final int timeLeft = t;
-            new BukkitRunnable() {
-                public void run() { if (!waiting) { cancel(); return; } broadcastCountdown(timeLeft, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut); }
-            }.runTaskLater(instance, (totalTime - timeLeft) * 20L);
-        }
+        String soundStr = instance.getConfig().getString("beforestart.broadcast.sound", "ORB_PICKUP,1,1");
+        String titleStr = instance.getConfig().getString("beforestart.broadcast.title", "&6&l游戏将在 %time% 秒后开始");
+        String subtitleStr = instance.getConfig().getString("beforestart.broadcast.subtitle", null);
+        int fadeIn = instance.getConfig().getInt("beforestart.broadcast.fade-in", 20);
+        int stay = instance.getConfig().getInt("beforestart.broadcast.stay", 40);
+        int fadeOut = instance.getConfig().getInt("beforestart.broadcast.fade-out", 20);
+        runCountdownBroadcast(totalTime, showtime, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%time%", false);
     }
 
-    private void broadcastCountdown(int timeLeft, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut) {
-        try {
-            String[] sp = soundStr.split(",");
-            playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
-        } catch (Exception ignored) {}
-        String title = titleStr != null ? colorize(titleStr.replace("%time%", String.valueOf(timeLeft))) : null;
-        String subtitle = subtitleStr != null ? colorize(subtitleStr.replace("%time%", String.valueOf(timeLeft))) : null;
-        if ((title != null && !title.isEmpty()) || (subtitle != null && !subtitle.isEmpty())) {
-            sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
-        }
-    }
-    
     private void startAftergame() {
         aftergameDuration = instance.getConfig().getInt("aftergame.time", 10);
         if (aftergameDuration <= 0) { stop(); return; }
         aftergameRunning = true;
         aftergameStartTime = System.currentTimeMillis();
         acceptWords = false;
-        startAftergameCountdownBroadcast(aftergameDuration);
+        List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
+        String soundStr = instance.getConfig().getString("aftergame.broadcast.sound", "");
+        String titleStr = instance.getConfig().getString("aftergame.broadcast.title", "&c%endtime%");
+        String subtitleStr = instance.getConfig().getString("aftergame.broadcast.subtitle", null);
+        int fadeIn = instance.getConfig().getInt("aftergame.broadcast.fade-in", 5);
+        int stay = instance.getConfig().getInt("aftergame.broadcast.stay", 10);
+        int fadeOut = instance.getConfig().getInt("aftergame.broadcast.fade-out", 5);
+        runCountdownBroadcast(aftergameDuration, showtime, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true);
         new BukkitRunnable() {
             public void run() { stopAftergame(); }
         }.runTaskLater(instance, aftergameDuration * 20L);
-    }
-
-    private void startAftergameCountdownBroadcast(int totalTime) {
-        List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
-        if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
-        final String soundStr = instance.getConfig().getString("aftergame.broadcast.sound", "ORB_PICKUP,1,1");
-        final String titleStr = instance.getConfig().getString("aftergame.broadcast.title", "&c游戏将在 %endtime% 秒后关闭");
-        final String subtitleStr = instance.getConfig().getString("aftergame.broadcast.subtitle", null);
-        final int fadeIn = instance.getConfig().getInt("aftergame.broadcast.fade-in", 20);
-        final int stay = instance.getConfig().getInt("aftergame.broadcast.stay", 40);
-        final int fadeOut = instance.getConfig().getInt("aftergame.broadcast.fade-out", 20);
-        for (int t : showtime) {
-            if (t > totalTime) continue;
-            final int timeLeft = t;
-            new BukkitRunnable() {
-                public void run() { if (!aftergameRunning) { cancel(); return; } broadcastAftergameCountdown(timeLeft, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut); }
-            }.runTaskLater(instance, (totalTime - timeLeft) * 20L);
-        }
-    }
-
-    private void broadcastAftergameCountdown(int timeLeft, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut) {
-        try {
-            String[] sp = soundStr.split(",");
-            playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
-        } catch (Exception ignored) {}
-        String title = titleStr != null ? colorize(titleStr.replace("%endtime%", String.valueOf(timeLeft))) : null;
-        String subtitle = subtitleStr != null ? colorize(subtitleStr.replace("%endtime%", String.valueOf(timeLeft))) : null;
-        if ((title != null && !title.isEmpty()) || (subtitle != null && !subtitle.isEmpty())) {
-            sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
-        }
     }
 
     private void stopAftergame() {
@@ -720,9 +616,7 @@ public class Game {
     }
 
     public void stop() {
-        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; cancelTasks(); stopScoreboardTask();
-        if (objective != null) { objective.unregister(); objective = null; }
-        clearScoreboardTeams();
+        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
         hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }

@@ -135,10 +135,10 @@ public class DrawMyThing extends JavaPlugin {
 
     private void initItems() {
         leaveItem = buildItemFromConfig("item.leave", Material.BED, (short) 14, "&c返回大厅", null);
-        pencilItem = buildItemFromConfig("item.pencil", Material.STICK, (short) 0, "&b铅笔", null);
-        bigPencilItem = buildItemFromConfig("item.big-pencil", Material.BLAZE_ROD, (short) 0, "&e大号铅笔", null);
+        pencilItem = buildItemFromConfig("item.pencil", Material.WOOD_SWORD, (short) 0, "&a默认画笔", null);
+        bigPencilItem = buildItemFromConfig("item.big-pencil", Material.IRON_SWORD, (short) 0, "&a&l粗画笔", null);
         eraserItem = buildItemFromConfig("item.eraser", Material.TNT, (short) 0, "&c清空画布", null);
-        colorPickerItem = buildItemFromConfig("item.color-picker", Material.COMPASS, (short) 0, "&a一键填充", null);
+        colorPickerItem = buildItemFromConfig("item.color-picker", Material.BUCKET, (short) 0, "&9填充画布", null);
     }
 
     private ItemStack buildItemFromConfig(String path, Material defMat, short defData, String defName, List<String> defLore) {
@@ -192,7 +192,6 @@ public class DrawMyThing extends JavaPlugin {
                 int woolData = c.getInt("wool", 0);
                 String colorName = ChatUtil.colorize(c.getString("name", "&f颜色"));
                 int slot = c.getInt("slot", 0);
-                if (slot >= 10) slot += 1;
                 ItemStack item = new ItemStack(Material.WOOL, 1, (short) woolData);
                 ItemMeta meta = item.getItemMeta();
                 meta.setDisplayName(colorName);

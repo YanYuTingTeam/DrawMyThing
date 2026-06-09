@@ -174,7 +174,7 @@ item:
     sound: 'FIZZ,1,1'
   eraser:
     material: TNT
-    data: 14
+    data: 0
     slot: 2
     name: '&c清空画布(右键清空)'
     lore:
@@ -223,7 +223,7 @@ beforestart:
 aftergame:
   time: 10 # 对局结束后, n秒后退出游戏
   broadcast:
-    sound: 'ORB_PICKUP,1,1'
+    sound: ''
     title: '&c%endtime%'
     subtitle: ''
     fade-in: 5
@@ -232,14 +232,15 @@ aftergame:
   showtime: []
 
 game:
+  round: 3
   round-time: 85
+  all-found-delay: 5
   hints:
     - 30
     - 60
   actionbar: '&f&l提示 &r&f- %tip%'
   builder-actionbar: '&e&l题目: &r&f%paintname%'
   builder-teleport-delay: 0
-  round: 3
   started:
     title: ''
     subtitle: ''
