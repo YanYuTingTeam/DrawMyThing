@@ -121,6 +121,9 @@ public class Game {
         result = result.replace("%starttime%", String.valueOf(getStartTime()));
         result = result.replace("%round_now%", String.valueOf(roundCount));
         result = result.replace("%round_all%", String.valueOf(buildPerPlayer * score.size()));
+        if (builder != null) {
+            result = result.replace("%builder_player%", builder.getName());
+        }
         if (player != null) {
             result = result.replace("%player%", player.getName());
             if (score.containsKey(player)) result = result.replace("%score%", String.valueOf(score.get(player)));
@@ -426,7 +429,7 @@ public class Game {
             }
         }.runTaskLater(instance, delay * 20L);
         for (Player other : score.keySet()) { if (!other.equals(p)) giveWaitingItems(other); }
-        sendMsg("round-started", "%player%", p.getName());
+        sendMsg("round-started", "%builder_player%", p.getName());
         sendMsg("word-hint", "%tip%", getTipText(null));
         ChatUtil.sendMsg(builder, "your-word", "%word%", word);
     }
@@ -513,7 +516,7 @@ public class Game {
         });
         int scoreVal = content.size() * 10;
         for (String line : content) {
-            if (line.contains("%player%") && line.contains("%score%")) {
+            if (line.contains("%player%") && !line.contains("%builder_player%") && line.contains("%score%")) {
                 for (Map.Entry<Player, Integer> e : sorted) {
                     String pl = colorize(replacePlaceholders(line, e.getKey()));
                     String key = pl.length() > 16 ? pl.substring(0, 16) : pl;

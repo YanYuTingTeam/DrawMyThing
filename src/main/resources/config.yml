@@ -128,13 +128,13 @@ scoreboard:
     refresh: 20
     title: '&a&l等待玩家加入'
     content:
-      - ''
+      - '&f'
       - '&6&l时间剩余'
       - '&f15秒'
-      - ''
+      - '&f'
       - '&6&l玩家'
       - '&f%count%/%max%'
-      - ''
+      - '&f'
       - '&6&l最少玩家'
       - '&f2'
       - '&f--------------'
@@ -142,30 +142,30 @@ scoreboard:
     refresh: 20
     title: '&a&l开始中...'
     content:
-      - ''
+      - '&f'
       - '&6&l开始中'
-      - '&7玩家: &f%count%/%max%'
-      - ''
-      - ''
+      - '&f%starttime%秒'
+      - '&f'
+      - '&f'
       - '&f--------------'
   gaming:
     refresh: 20
     title: '&a&l你&2&l画&a&l我&2&l猜'
     content:
-      - ''
+      - '&f'
       - '&e&l回合'
       - '&f%round_now%/%round_all%'
-      - ''
-      - '&6&l画手'
       - '&f'
-      - ''
+      - '&6&l画手'
+      - '&f%builder_player%'
+      - '&f'
       - '&e%score% &f%player%'
       - '&f--------------'
 
 autojoin:
-  enabled: false
+  enabled: true
   randomjoin: false
-  joingame: ''
+  joingame: 'castle'
 
 join:
   title: '&a&l你&2&l画&a&l我&2&l猜'

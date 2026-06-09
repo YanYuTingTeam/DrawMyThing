@@ -32,7 +32,7 @@ auto-join-no-game: '&c没有可用的游戏'
 auto-join-failed: '&c自动加入游戏失败'
 
 game-starting: '&6&l游戏将在 %time% 秒后开始'
-round-started: '&6&l%player% 是本轮的绘画者'
+round-started: '&c&l%builder_player% &7&l正在画画.'
 word-hint: '&e&l猜 &f&l%tip%'
 your-word: '&e你的词是 &6&l%word%'
 first-found: '&6&l+3 &a&l%player% 猜对了！'

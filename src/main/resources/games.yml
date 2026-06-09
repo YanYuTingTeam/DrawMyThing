@@ -1,0 +1,11 @@
+games:
+  castle:
+    region: world
+    builderspawn: world:4:41:11:270.51898:2.1847277
+    spawn: world:-7:24:11:269.98492:-0.35096154
+    lobby: world:-70:13:11:89.88389:-3.0695288
+    painting:
+      pos1: world:46:26:-19:15.547845:74.318695
+      pos2: world:46:60:41:-86.88109:89.332695
+    min-player: 2
+    max-player: 5
