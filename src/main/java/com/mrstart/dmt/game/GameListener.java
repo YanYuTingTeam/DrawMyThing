@@ -5,6 +5,7 @@ import com.mrstart.dmt.DrawMyThing;
 import com.mrstart.dmt.cuboid.CuboidZone;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -143,14 +144,32 @@ public class GameListener implements Listener {
             if (zone != null && !zone.contains(b)) return;
             byte data = pencilColor.getData();
             b.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            Block right = b.getRelative(1, 0, 0);
-            Block left = b.getRelative(-1, 0, 0);
-            Block up = b.getRelative(0, 1, 0);
-            Block down = b.getRelative(0, -1, 0);
-            if (zone == null || zone.contains(right)) right.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            if (zone == null || zone.contains(left)) left.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            if (zone == null || zone.contains(up)) up.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            if (zone == null || zone.contains(down)) down.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            BlockFace face = event.getBlockFace();
+            Block h1, h2, v1, v2;
+            if (face == BlockFace.UP || face == BlockFace.DOWN) {
+                BlockFace dir = player.getFacing();
+                h1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
+                h2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
+                BlockFace perp = getPerpendicularFace(dir);
+                v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
+                v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
+            } else {
+                h1 = b.getRelative(BlockFace.UP);
+                h2 = b.getRelative(BlockFace.DOWN);
+                BlockFace dir = player.getFacing();
+                if (face == dir || face == dir.getOppositeFace()) {
+                    BlockFace perp = getPerpendicularFace(dir);
+                    v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
+                    v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
+                } else {
+                    v1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
+                    v2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
+                }
+            }
+            if (zone == null || zone.contains(h1)) h1.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
             playToolSound(player);
             startPaintTask(player, game, true);
             return;
@@ -252,17 +271,29 @@ public class GameListener implements Listener {
                 byte data = pencilColor.getData();
                 b.setTypeIdAndData(Material.WOOL.getId(), data, true);
                 if (big) {
-                    Block right = b.getRelative(1, 0, 0);
-                    Block left = b.getRelative(-1, 0, 0);
-                    Block up = b.getRelative(0, 1, 0);
-                    Block down = b.getRelative(0, -1, 0);
-                    if (zone == null || zone.contains(right)) right.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                    if (zone == null || zone.contains(left)) left.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                    if (zone == null || zone.contains(up)) up.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                    if (zone == null || zone.contains(down)) down.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    BlockFace dir = player.getFacing();
+                    float pitch = player.getLocation().getPitch();
+                    Block h1, h2, v1, v2;
+                    if (pitch > 45 || pitch < -45) {
+                        h1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
+                        h2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
+                        BlockFace perp = getPerpendicularFace(dir);
+                        v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
+                        v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
+                    } else {
+                        h1 = b.getRelative(BlockFace.UP);
+                        h2 = b.getRelative(BlockFace.DOWN);
+                        BlockFace perp = getPerpendicularFace(dir);
+                        v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
+                        v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
+                    }
+                    if (zone == null || zone.contains(h1)) h1.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
                 }
             }
-        }.runTaskTimer(instance, 2L, 2L);
+        }.runTaskTimer(instance, 1L, 1L);
         paintTasks.put(player, task);
     }
 
@@ -306,6 +337,14 @@ public class GameListener implements Listener {
         if (!player.hasMetadata(key)) return null;
         List<MetadataValue> values = player.getMetadata(key);
         return (values != null && !values.isEmpty()) ? values.get(0).asString() : null;
+    }
+
+    private BlockFace getPerpendicularFace(BlockFace face) {
+        switch (face) {
+            case NORTH: case SOUTH: return BlockFace.EAST;
+            case EAST: case WEST: return BlockFace.NORTH;
+            default: return BlockFace.EAST;
+        }
     }
 
     private void playToolSound(Player player) {
