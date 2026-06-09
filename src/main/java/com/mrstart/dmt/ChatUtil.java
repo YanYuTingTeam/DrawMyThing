@@ -3,7 +3,6 @@ package com.mrstart.dmt;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
 public class ChatUtil {

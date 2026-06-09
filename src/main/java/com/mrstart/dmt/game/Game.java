@@ -24,6 +24,7 @@ public class Game {
     private CuboidZone buildzone;
     private Location spawn;
     private Location bspawn;
+    private Location lobby;
     private Location paintingPos1;
     private Location paintingPos2;
     private String name;
@@ -86,9 +87,11 @@ public class Game {
     public int getPlayerCount() { return players; }
     public Location getSpawn() { return spawn; }
     public Location getBuilderSpawn() { return bspawn; }
+    public Location getLobby() { return lobby; }
 
     public void setSpawn(Location loc) { this.spawn = loc; }
     public void setBuilderSpawn(Location loc) { this.bspawn = loc; }
+    public void setLobby(Location loc) { this.lobby = loc; }
     public void setMinPlayers(int i) { this.minplayers = i; }
     public void setMaxPlayers(int i) { this.maxplayers = i; }
     public void setRegion(String region) { this.region = region; }
@@ -169,7 +172,8 @@ public class Game {
         if (score.containsKey(player)) { ChatUtil.sendMsg(player, "already-in-game"); return; }
         if (players >= maxplayers) { ChatUtil.sendMsg(player, "game-full"); return; }
         player.setMetadata("oldLoc", new org.bukkit.metadata.FixedMetadataValue(instance, LocationUtil.LocationToString(player.getLocation())));
-        if (spawn != null) player.teleport(spawn);
+        Location teleportTarget = lobby != null ? lobby : spawn;
+        if (teleportTarget != null) player.teleport(teleportTarget);
         ItemStack[] contents = player.getInventory().getContents();
         ItemStack[] saved = new ItemStack[contents.length];
         for (int i = 0; i < contents.length; i++) { if (contents[i] != null) saved[i] = contents[i].clone(); }
@@ -521,6 +525,7 @@ public class Game {
         file.set(path + ".region", region);
         file.set(path + ".builderspawn", bspawn != null ? LocationUtil.LocationToString(bspawn) : "");
         file.set(path + ".spawn", spawn != null ? LocationUtil.LocationToString(spawn) : "");
+        file.set(path + ".lobby", lobby != null ? LocationUtil.LocationToString(lobby) : "");
         if (paintingPos1 != null) file.set(path + ".painting.pos1", LocationUtil.LocationToString(paintingPos1));
         else if (buildzone != null) file.set(path + ".painting.pos1", LocationUtil.LocationToString(buildzone.getCorner1().getLocation()));
         else file.set(path + ".painting.pos1", "");
@@ -539,6 +544,7 @@ public class Game {
         String region = file.getString(path + ".region", "world");
         Location spawn = LocationUtil.StringToLoc(file.getString(path + ".spawn", ""));
         Location bspawn = LocationUtil.StringToLoc(file.getString(path + ".builderspawn", ""));
+        Location lobby = LocationUtil.StringToLoc(file.getString(path + ".lobby", ""));
 
         CuboidZone zone = null;
         Location pos1 = null, pos2 = null;
@@ -549,6 +555,7 @@ public class Game {
         if (pos1 != null && pos2 != null) zone = new CuboidZone(pos1.getBlock(), pos2.getBlock());
 
         Game game = new Game(zone, spawn, bspawn, name, region, instance);
+        if (lobby != null) game.setLobby(lobby);
         if (pos1 != null) game.setPaintingPos1(pos1);
         if (pos2 != null) game.setPaintingPos2(pos2);
         game.setMinPlayers(file.getInt(path + ".min-player", 2));

@@ -1,6 +1,5 @@
 package com.mrstart.dmt;
 
-import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.game.Game;
 import com.mrstart.dmt.game.GameListener;
 import com.mrstart.dmt.sign.SignListener;
@@ -14,7 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -30,7 +28,6 @@ public class DrawMyThing extends JavaPlugin {
     private List<String> words = new ArrayList<String>();
     public Inventory cci;
 
-    private ItemStack[] colorItems = new ItemStack[16];
     private ItemStack leaveItem;
     private ItemStack pencilItem;
     private ItemStack bigPencilItem;
@@ -245,6 +242,10 @@ public class DrawMyThing extends JavaPlugin {
                 if (!checkAdmin(player)) return true;
                 handleSetSpawn(player, args, "builderspawn");
                 break;
+            case "setlobby":
+                if (!checkAdmin(player)) return true;
+                handleSetLobby(player, args);
+                break;
 
             // ---- 游戏管理 ----
             case "create":
@@ -362,6 +363,22 @@ public class DrawMyThing extends JavaPlugin {
         saveGamesFile();
     }
 
+    /**
+     * /dmt setlobby <gameName> — 设置等待大厅位置
+     */
+    private void handleSetLobby(Player player, String[] args) {
+        if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        String gameName = joinArgs(args, 1);
+        Game game = getGameByName(gameName);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", gameName); return; }
+
+        Location loc = player.getLocation();
+        game.setLobby(loc);
+        game.save(gamesConfig);
+        saveGamesFile();
+        ChatUtil.sendMsg(player, "lobby-set", "%game%", gameName);
+    }
+
     private void handleDelete(Player player, String[] args) {
         if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
         String gameName = joinArgs(args, 1);
@@ -448,21 +465,19 @@ public class DrawMyThing extends JavaPlugin {
     }
 
     private void sendHelp(Player player) {
+        player.sendMessage(ChatUtil.getMessage("help-title"));
         if (player.hasPermission("dmt.admin")) {
-            player.sendMessage(ChatUtil.getMessage("help-admin-title"));
             player.sendMessage(ChatUtil.getMessage("help-admin-create"));
             player.sendMessage(ChatUtil.getMessage("help-admin-delete"));
             player.sendMessage(ChatUtil.getMessage("help-admin-pos1"));
             player.sendMessage(ChatUtil.getMessage("help-admin-pos2"));
             player.sendMessage(ChatUtil.getMessage("help-admin-spawn"));
             player.sendMessage(ChatUtil.getMessage("help-admin-bspawn"));
+            player.sendMessage(ChatUtil.getMessage("help-admin-lobby"));
             player.sendMessage(ChatUtil.getMessage("help-admin-min"));
             player.sendMessage(ChatUtil.getMessage("help-admin-max"));
             player.sendMessage(ChatUtil.getMessage("help-admin-reload"));
         }
-        player.sendMessage(ChatUtil.getMessage("help-player-title"));
-        player.sendMessage(ChatUtil.getMessage("help-player-join"));
-        player.sendMessage(ChatUtil.getMessage("help-player-leave"));
     }
 
     private boolean checkAdmin(Player player) {

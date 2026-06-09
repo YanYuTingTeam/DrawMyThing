@@ -3,7 +3,6 @@ package com.mrstart.dmt.sign;
 import com.mrstart.dmt.ChatUtil;
 import com.mrstart.dmt.DrawMyThing;
 import com.mrstart.dmt.game.Game;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
