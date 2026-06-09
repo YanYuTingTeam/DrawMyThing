@@ -515,14 +515,14 @@ public class Game {
             }
         }
 
-        sendMsg("game-over");
-        Player winner = null;
-        for (Player p : score.keySet()) { if (winner == null || score.get(p) > score.get(winner)) winner = p; }
-        if (winner != null) {
-            sendMsg("scores-label");
-            for (Player p : score.keySet()) sendMsg("score-line", "%player%", p.getName(), "%score%", String.valueOf(score.get(p)));
-            sendMsg("winner", "%player%", winner.getName());
-        }
+        List<Player> sorted = new ArrayList<Player>(score.keySet());
+        java.util.Collections.sort(sorted, new java.util.Comparator<Player>() {
+            public int compare(Player a, Player b) { return score.get(b) - score.get(a); }
+        });
+        String t1 = sorted.size() > 0 ? sorted.get(0).getName() : "-";
+        String t2 = sorted.size() > 1 ? sorted.get(1).getName() : "-";
+        String t3 = sorted.size() > 2 ? sorted.get(2).getName() : "-";
+        sendMsg("end-top", "%t1player%", t1, "%t2player%", t2, "%t3player%", t3);
         startAftergame();
     }
 
