@@ -95,6 +95,19 @@ public class GameScoreboard {
         }.runTaskTimer(plugin, 5L, Math.max(refresh, 1));
     }
 
+    public void startEndingScoreboard() {
+        stopScoreboardTask();
+        if (objective != null) objective.unregister();
+        objectiveIndex = 0;
+        objective = board.registerNewObjective(game.getName() + "_sb", "dummy");
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        objective.setDisplayName(ChatUtil.colorize(plugin.getConfig().getString("scoreboard.ending.title", "&c&l游戏结束")));
+        int refresh = plugin.getConfig().getInt("scoreboard.ending.refresh", 20);
+        scoreboardTask = new BukkitRunnable() {
+            public void run() { if (game.getEndTime() <= 0) { cancel(); return; } updateEndingScoreboard(); }
+        }.runTaskTimer(plugin, 5L, Math.max(refresh, 1));
+    }
+
     public void stopScoreboardTask() {
         if (scoreboardTask != null) { scoreboardTask.cancel(); scoreboardTask = null; }
     }
@@ -144,6 +157,18 @@ public class GameScoreboard {
                 String f = ChatUtil.colorize(game.replacePlaceholders(line, null));
                 addTeamEntry(f, scoreVal--);
             }
+        }
+    }
+
+    private void updateEndingScoreboard() {
+        clearScoreboardTeams();
+        objective.setDisplayName(ChatUtil.colorize(game.replacePlaceholders(plugin.getConfig().getString("scoreboard.ending.title", "&c&l游戏结束"), null)));
+        List<String> content = plugin.getConfig().getStringList("scoreboard.ending.content");
+        if (content == null || content.isEmpty()) content = Arrays.asList("", "&7即将结束", "&f%endtime%秒", "");
+        int scoreVal = content.size();
+        for (String line : content) {
+            line = ChatUtil.colorize(game.replacePlaceholders(line, null));
+            addTeamEntry(line, scoreVal--);
         }
     }
 

@@ -252,6 +252,15 @@ public class Game {
             return;
         }
         if (score.containsKey(player)) { ChatUtil.sendMsg(player, "already-in-game"); return; }
+        if (aftergameRunning) {
+            if (instance.isBungeeMode()) {
+                String kickMsg = instance.getConfig().getString("kick.ending", "&c游戏正在结束, 无法加入");
+                player.kickPlayer(ChatUtil.colorize(kickMsg));
+            } else {
+                ChatUtil.sendMsg(player, "game-already-started");
+            }
+            return;
+        }
         if (players >= maxplayers) {
             if (instance.isBungeeMode()) {
                 String kickMsg = instance.getConfig().getString("kick.full", "&c房间已满, 你被迫下线");
@@ -602,6 +611,7 @@ public class Game {
         aftergameRunning = true;
         aftergameStartTime = System.currentTimeMillis();
         acceptWords = false;
+        scoreboard.startEndingScoreboard();
         List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
         String soundStr = instance.getConfig().getString("aftergame.broadcast.sound", "");
         String titleStr = instance.getConfig().getString("aftergame.broadcast.title", "&c%endtime%");
@@ -632,8 +642,10 @@ public class Game {
         String motdWait = instance.getConfig().getString("motd.wait", "");
         String motdFull = instance.getConfig().getString("motd.full", "");
         String motdStart = instance.getConfig().getString("motd.start", "");
+        String motdEnd = instance.getConfig().getString("motd.ending", "");
         String motd;
-        if (started) motd = motdStart;
+        if (started && aftergameRunning) motd = motdEnd;
+        else if (started) motd = motdStart;
         else if (players >= maxplayers) motd = motdFull;
         else motd = motdWait;
         try {

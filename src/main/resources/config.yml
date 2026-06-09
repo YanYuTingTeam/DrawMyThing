@@ -297,6 +297,14 @@ scoreboard:
       - '&f'
       - '&e%score% &f%player%'
       - '&f--------------'
+  ending:
+    refresh: 20
+    title: '&c&l游戏结束'
+    content:
+      - '&f'
+      - '&4&l游戏结束中'
+      - '&f'
+      - '&f--------------'
 
 autojoin:
   enabled: true
@@ -317,7 +325,9 @@ motd:
   wait: 'already'
   full: 'full'
   start: 'start'
+  ending: 'ending'
 
 kick:
-  full: '&c房间已满, 你被迫下线'
-  start: '&c游戏已开始, 你被迫下线'
+  full: '&c房间已满, 无法加入'
+  start: '&c游戏已开始, 无法加入'
+  ending: '&c游戏正在结束, 无法加入'
