@@ -61,7 +61,6 @@ public class Game {
     private Scoreboard board;
     private Objective objective;
     private BukkitTask scoreboardTask = null;
-    private List<String> currentEntries = new ArrayList<String>();
     private int objectiveIndex = 0;
 
     public Game(CuboidZone build, Location spawn, Location bspawn, String name, String region, DrawMyThing instance) {
@@ -81,16 +80,21 @@ public class Game {
 
     private String colorize(String s) { return ChatUtil.colorize(s); }
 
-    private String makeUniqueEntry(String text) {
-        String base = text.length() > 16 ? text.substring(0, 16) : text;
-        String invisible = "§" + (char) ('0' + (objectiveIndex % 10));
-        objectiveIndex++;
-        return base + invisible;
+    private void clearScoreboardTeams() {
+        for (Team t : board.getTeams()) {
+            for (String e : t.getEntries()) board.resetScores(e);
+            t.unregister();
+        }
     }
 
-    private void setUniqueScore(String entry, int scoreVal) {
-        currentEntries.add(entry);
-        objective.getScore(entry).setScore(scoreVal);
+    private void addTeamEntry(String display, int scoreVal) {
+        String invisible = "§" + (char) ('0' + (objectiveIndex % 10));
+        objectiveIndex++;
+        Team t = board.registerNewTeam("t" + objectiveIndex);
+        t.setPrefix(display);
+        t.setSuffix(invisible);
+        t.addEntry(display + invisible);
+        objective.getScore(display + invisible).setScore(scoreVal);
     }
 
     public String getName() { return name; }
@@ -391,9 +395,7 @@ public class Game {
         Random r = new Random();
         int idx = r.nextInt(word.length());
         wordf.setCharAt(idx, word.charAt(idx));
-        sendMsg("word-hint", "%tip%", getTipText(null));
         playSoundForAll(Sound.ITEM_PICKUP, 1.0f, 1.0f);
-        if (builder != null) ChatUtil.sendMsg(builder, "your-word", "%word%", word);
     }
 
     public void wordFoundBy(Player player) {
@@ -442,10 +444,7 @@ public class Game {
     }
 
     private void sendStartedBroadcast() {
-        String message = instance.getConfig().getString("game.started.message", null);
-        if (message != null && !message.isEmpty()) {
-            sendMessage(colorize(replacePlaceholders(message, null)));
-        }
+        sendMsg("game-started");
         String title = instance.getConfig().getString("game.started.title", null);
         String subtitle = instance.getConfig().getString("game.started.subtitle", null);
         String soundStr = instance.getConfig().getString("game.started.sound", "LEVEL_UP,1,1");
@@ -507,8 +506,7 @@ public class Game {
         }.runTaskLater(instance, delay * 20L);
         for (Player other : score.keySet()) { if (!other.equals(p)) giveWaitingItems(other); }
         sendMsg("round-started", "%builder_player%", p.getName());
-        sendMsg("word-hint", "%tip%", getTipText(null));
-        ChatUtil.sendMsg(builder, "your-word", "%word%", word);
+        ChatUtil.sendMsg(builder, "show-paintname", "%paintname%", word);
     }
 
     public void increaseScore(Player p, int value) {
@@ -522,7 +520,7 @@ public class Game {
         stopScoreboardTask();
         if (objective != null) objective.unregister();
         objectiveIndex = 0;
-        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
+        objective = board.registerNewObjective(name + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("waiting-scoreboard-title", "&6等待中")));
         int refresh = instance.getConfig().getInt("scoreboard.waiting.refresh", 20);
@@ -535,7 +533,7 @@ public class Game {
         stopScoreboardTask();
         if (objective != null) objective.unregister();
         objectiveIndex = 0;
-        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
+        objective = board.registerNewObjective(name + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("starting-scoreboard-title", "&6开始中")));
         int refresh = instance.getConfig().getInt("scoreboard.starting.refresh", 20);
@@ -548,7 +546,7 @@ public class Game {
         stopScoreboardTask();
         if (objective != null) objective.unregister();
         objectiveIndex = 0;
-        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
+        objective = board.registerNewObjective(name + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("gaming-scoreboard-title", "&6分数")));
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
@@ -560,42 +558,31 @@ public class Game {
     private void stopScoreboardTask() { if (scoreboardTask != null) { scoreboardTask.cancel(); scoreboardTask = null; } }
 
     private void updateWaitingScoreboard() {
-        objective.unregister();
-        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        currentEntries.clear();
+        clearScoreboardTeams();
         objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.waiting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a等待开始", "");
         int scoreVal = content.size();
         for (String line : content) {
             line = colorize(replacePlaceholders(line, null));
-            String entry = makeUniqueEntry(line);
-            setUniqueScore(entry, scoreVal--);
+            addTeamEntry(line, scoreVal--);
         }
     }
 
     private void updateStartingScoreboard() {
-        objective.unregister();
-        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        currentEntries.clear();
+        clearScoreboardTeams();
         objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.starting.title", "&6开始中"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.starting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a即将开始", "");
         int scoreVal = content.size();
         for (String line : content) {
             line = colorize(replacePlaceholders(line, null));
-            String entry = makeUniqueEntry(line);
-            setUniqueScore(entry, scoreVal--);
+            addTeamEntry(line, scoreVal--);
         }
     }
 
     private void updateGamingScoreboard() {
-        objective.unregister();
-        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        currentEntries.clear();
+        clearScoreboardTeams();
         objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.gaming.title", "&6分数"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.gaming.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&a%player%: &e%score%", "");
@@ -608,13 +595,11 @@ public class Game {
             if (line.contains("%player%") && !line.contains("%builder_player%") && line.contains("%score%")) {
                 for (Map.Entry<Player, Integer> e : sorted) {
                     String pl = colorize(replacePlaceholders(line, e.getKey()));
-                    String entry = makeUniqueEntry(pl);
-                    setUniqueScore(entry, scoreVal--);
+                    addTeamEntry(pl, scoreVal--);
                 }
             } else {
                 String f = colorize(replacePlaceholders(line, null));
-                String entry = makeUniqueEntry(f);
-                setUniqueScore(entry, scoreVal--);
+                addTeamEntry(f, scoreVal--);
             }
         }
     }
@@ -663,7 +648,7 @@ public class Game {
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; cancelTasks(); stopScoreboardTask();
         if (objective != null) { objective.unregister(); objective = null; }
-        currentEntries.clear();
+        clearScoreboardTeams();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);
