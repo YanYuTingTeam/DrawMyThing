@@ -101,31 +101,31 @@ public class GameScoreboard {
 
     private void updateWaitingScoreboard() {
         clearScoreboardTeams();
-        objective.setDisplayName(ChatUtil.colorize(game.replacePlaceholders(plugin.getConfig().getString("scoreboard.waiting.title", "&6等待中"), null)));
+        objective.setDisplayName(ChatUtil.colorize(game.getMessenger().replacePlaceholders(plugin.getConfig().getString("scoreboard.waiting.title", "&6等待中"), null)));
         List<String> content = plugin.getConfig().getStringList("scoreboard.waiting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a等待开始", "");
         int scoreVal = content.size();
         for (String line : content) {
-            line = ChatUtil.colorize(game.replacePlaceholders(line, null));
+            line = ChatUtil.colorize(game.getMessenger().replacePlaceholders(line, null));
             addTeamEntry(line, scoreVal--);
         }
     }
 
     private void updateStartingScoreboard() {
         clearScoreboardTeams();
-        objective.setDisplayName(ChatUtil.colorize(game.replacePlaceholders(plugin.getConfig().getString("scoreboard.starting.title", "&6开始中"), null)));
+        objective.setDisplayName(ChatUtil.colorize(game.getMessenger().replacePlaceholders(plugin.getConfig().getString("scoreboard.starting.title", "&6开始中"), null)));
         List<String> content = plugin.getConfig().getStringList("scoreboard.starting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a即将开始", "");
         int scoreVal = content.size();
         for (String line : content) {
-            line = ChatUtil.colorize(game.replacePlaceholders(line, null));
+            line = ChatUtil.colorize(game.getMessenger().replacePlaceholders(line, null));
             addTeamEntry(line, scoreVal--);
         }
     }
 
     private void updateGamingScoreboard() {
         clearScoreboardTeams();
-        objective.setDisplayName(ChatUtil.colorize(game.replacePlaceholders(plugin.getConfig().getString("scoreboard.gaming.title", "&6分数"), null)));
+        objective.setDisplayName(ChatUtil.colorize(game.getMessenger().replacePlaceholders(plugin.getConfig().getString("scoreboard.gaming.title", "&6分数"), null)));
         List<String> content = plugin.getConfig().getStringList("scoreboard.gaming.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&a%player%: &e%score%", "");
         Map<Player, Integer> scores = game.getScoreMap();
@@ -137,11 +137,11 @@ public class GameScoreboard {
         for (String line : content) {
             if (line.contains("%player%") && !line.contains("%builder_player%") && line.contains("%score%")) {
                 for (Map.Entry<Player, Integer> e : sorted) {
-                    String pl = ChatUtil.colorize(game.replacePlaceholders(line, e.getKey()));
+                    String pl = ChatUtil.colorize(game.getMessenger().replacePlaceholders(line, e.getKey()));
                     addTeamEntry(pl, scoreVal--);
                 }
             } else {
-                String f = ChatUtil.colorize(game.replacePlaceholders(line, null));
+                String f = ChatUtil.colorize(game.getMessenger().replacePlaceholders(line, null));
                 addTeamEntry(f, scoreVal--);
             }
         }
@@ -149,12 +149,12 @@ public class GameScoreboard {
 
     private void updateEndingScoreboard() {
         clearScoreboardTeams();
-        objective.setDisplayName(ChatUtil.colorize(game.replacePlaceholders(plugin.getConfig().getString("scoreboard.ending.title", "&c&l游戏结束"), null)));
+        objective.setDisplayName(ChatUtil.colorize(game.getMessenger().replacePlaceholders(plugin.getConfig().getString("scoreboard.ending.title", "&c&l游戏结束"), null)));
         List<String> content = plugin.getConfig().getStringList("scoreboard.ending.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7即将结束", "&f%endtime%秒", "");
         int scoreVal = content.size();
         for (String line : content) {
-            line = ChatUtil.colorize(game.replacePlaceholders(line, null));
+            line = ChatUtil.colorize(game.getMessenger().replacePlaceholders(line, null));
             addTeamEntry(line, scoreVal--);
         }
     }

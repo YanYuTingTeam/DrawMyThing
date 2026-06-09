@@ -26,7 +26,7 @@ public class TaskActionBar extends BukkitRunnable {
             if (p.isOnline()) {
                 boolean isBuilder = game.getBuilder() != null && game.getBuilder().equals(p);
                 String template = (isBuilder && builderTemplate != null) ? builderTemplate : defaultTemplate;
-                String actionBar = game.replacePlaceholders(template, p);
+                String actionBar = game.getMessenger().replacePlaceholders(template, p);
                 ChatUtil.sendActionBar(p, actionBar);
             }
         }

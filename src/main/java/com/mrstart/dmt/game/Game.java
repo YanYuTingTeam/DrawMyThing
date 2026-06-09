@@ -7,7 +7,6 @@ import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.task.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.Sign;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -59,9 +58,10 @@ public class Game {
     private Location builderBoundaryPos2;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
     private boolean acceptWords = true;
-    private List<Block> signs = new ArrayList<Block>();
 
     private GameScoreboard scoreboard;
+    private GameMessenger messenger;
+    private GameSignManager signManager;
 
     public Game(CuboidZone build, Location spawn, Location bspawn, String name, String region, DrawMyThing instance) {
         this.buildzone = build;
@@ -71,9 +71,9 @@ public class Game {
         this.region = region;
         this.instance = instance;
         this.scoreboard = new GameScoreboard(this, instance);
+        this.messenger = new GameMessenger(this, instance);
+        this.signManager = new GameSignManager(this, instance);
     }
-
-    private String colorize(String s) { return ChatUtil.colorize(s); }
 
     public String getName() { return name; }
     public String getRegion() { return region; }
@@ -88,6 +88,10 @@ public class Game {
     public Location getSpawn() { return spawn; }
     public Location getBuilderSpawn() { return bspawn; }
     public Location getLobby() { return lobby; }
+    public int getRound() { return round; }
+    public int getRoundCount() { return roundCount; }
+    public StringBuilder getWordFormatted() { return wordf; }
+    public Map<Player, Integer> getRoundGainedScore() { return roundGainedScore; }
 
     public void setSpawn(Location loc) { this.spawn = loc; }
     public void setBuilderSpawn(Location loc) { this.bspawn = loc; }
@@ -99,6 +103,8 @@ public class Game {
     public boolean hasFound(Player player) { return hasFound.contains(player); }
 
     public Map<Player, Integer> getScoreMap() { return score; }
+    public GameMessenger getMessenger() { return messenger; }
+    public GameSignManager getSignManager() { return signManager; }
 
     public int getStartTime() {
         if (!waiting || started) return 0;
@@ -136,57 +142,6 @@ public class Game {
         return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
     }
 
-    /**
-     * 统一占位符替换（不做着色，着色由调用方处理）
-     */
-    public String replacePlaceholders(String template, Player player) {
-        if (template == null) return "";
-        String result = template;
-        result = result.replace("%game%", name);
-        result = result.replace("%count%", String.valueOf(players));
-        result = result.replace("%max%", String.valueOf(maxplayers));
-        result = result.replace("%min%", String.valueOf(minplayers));
-        result = result.replace("%starttime%", String.valueOf(getStartTime()));
-        result = result.replace("%endtime%", String.valueOf(getEndTime()));
-        result = result.replace("%round_now%", String.valueOf(roundCount));
-        result = result.replace("%round_all%", String.valueOf(round * score.size()));
-        if (builder != null) {
-            result = result.replace("%builder_player%", builder.getName());
-        }
-        if (player != null) {
-            result = result.replace("%player%", player.getName());
-            if (score.containsKey(player)) result = result.replace("%score%", String.valueOf(score.get(player)));
-            if (roundGainedScore.containsKey(player)) result = result.replace("%getscore%", String.valueOf(roundGainedScore.get(player)));
-            else result = result.replace("%getscore%", "0");
-        }
-        if (word != null) {
-            result = result.replace("%paintname%", word);
-            result = result.replace("%tip%", player != null ? getTipText(player) : getTipText(null));
-        }
-        return result;
-    }
-
-    public String formatMsg(String key, Player player, String... replacements) {
-        Object raw = instance.getMsgConfig().get(key);
-        String template;
-        if (raw instanceof List) {
-            List<?> list = (List<?>) raw;
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < list.size(); i++) {
-                if (i > 0) sb.append("\n");
-                sb.append(list.get(i).toString());
-            }
-            template = sb.toString();
-        } else {
-            template = raw != null ? raw.toString() : "";
-        }
-        String msg = ChatUtil.colorize(template);
-        for (int i = 0; i < replacements.length - 1; i += 2) {
-            msg = msg.replace(replacements[i], replacements[i + 1]);
-        }
-        return replacePlaceholders(msg, player);
-    }
-
     public Location getPaintingPos1() { return paintingPos1; }
     public Location getPaintingPos2() { return paintingPos2; }
 
@@ -201,81 +156,18 @@ public class Game {
 
     public List<Player> getPlayers() { return new ArrayList<Player>(score.keySet()); }
 
-    public void sendMessage(String message) {
-        String replaced = colorize(replacePlaceholders(message, null));
-        for (Player p : score.keySet()) p.sendMessage(replaced);
-    }
-
-    public void sendMsg(String key, String... replacements) {
-        String msg = formatMsg(key, null, replacements);
-        if (msg.contains("\n")) {
-            String[] lines = msg.split("\n");
-            for (Player p : score.keySet()) {
-                p.sendMessage(ChatUtil.getPrefix() + lines[0]);
-                for (int i = 1; i < lines.length; i++) {
-                    p.sendMessage(lines[i]);
-                }
-            }
-        } else {
-            for (Player p : score.keySet()) p.sendMessage(ChatUtil.getPrefix() + msg);
-        }
-    }
-
-    public void playSoundForAll(Sound sound, float volume, float pitch) {
-        for (Player p : score.keySet()) p.playSound(p.getLocation(), sound, volume, pitch);
-    }
-
-    public void playSoundsForAll(List<String> soundList) {
-        if (soundList == null) return;
-        for (String s : soundList) {
-            if (s == null || s.isEmpty()) continue;
-            try {
-                String[] sp = s.split(",");
-                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
-            } catch (Exception ignored) {}
-        }
-    }
-
-    public void sendTitleToAll(String title, String subtitle, int fadeIn, int stay, int fadeOut) {
-        for (Player p : score.keySet()) ChatUtil.sendTitle(p, title, subtitle, fadeIn, stay, fadeOut);
-    }
-
-    public void sendActionBarToAll(String message) {
-        for (Player p : score.keySet()) ChatUtil.sendActionBar(p, message);
-    }
-
-    public String getTipText(Player player) {
-        if (word == null) return "";
-        String splice = instance.getConfig().getString("tip.splice", " ");
-        String hide = instance.getConfig().getString("tip.hide", "_");
-        if (builder != null && builder.equals(player)) return joinWithSplice(word, splice);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < wordf.length(); i++) {
-            if (i > 0) sb.append(splice);
-            char c = wordf.charAt(i);
-            sb.append(c == '_' ? hide : String.valueOf(c));
-        }
-        return sb.toString();
-    }
-
-    private String joinWithSplice(String word, String splice) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < word.length(); i++) { if (i > 0) sb.append(splice); sb.append(word.charAt(i)); }
-        return sb.toString();
-    }
-
     private void giveWaitingItems(Player player) {
         PlayerInventory inv = player.getInventory();
         int leaveSlot = instance.getConfig().getInt("item.leave.slot", 8);
-        inv.setItem(leaveSlot, instance.getLeaveItem());
+        inv.setItem(leaveSlot, instance.getItemManager().getLeaveItem());
     }
 
     private void giveBuilderItems(Player player) {
         PlayerInventory inv = player.getInventory();
-        inv.setItem(instance.getConfig().getInt("item.pencil.slot", 0), instance.getPencilItem());
-        inv.setItem(instance.getConfig().getInt("item.big-pencil.slot", 1), instance.getBigPencilItem());
-        inv.setItem(instance.getConfig().getInt("item.eraser.slot", 2), instance.getEraserItem());
-        inv.setItem(instance.getConfig().getInt("item.color-picker.slot", 3), instance.getColorPickerItem());
+        inv.setItem(instance.getConfig().getInt("item.pencil.slot", 0), instance.getItemManager().getPencilItem());
+        inv.setItem(instance.getConfig().getInt("item.big-pencil.slot", 1), instance.getItemManager().getBigPencilItem());
+        inv.setItem(instance.getConfig().getInt("item.eraser.slot", 2), instance.getItemManager().getEraserItem());
+        inv.setItem(instance.getConfig().getInt("item.color-picker.slot", 3), instance.getItemManager().getColorPickerItem());
     }
 
     public void join(Player player) {
@@ -322,8 +214,8 @@ public class Game {
         player.getInventory().clear();
         giveWaitingItems(player);
 
-        String joinTitle = replacePlaceholders(instance.getConfig().getString("join.title", "&a&l你画我猜"), player);
-        String joinSub = replacePlaceholders(instance.getConfig().getString("join.subtitle", "&7你已加入 &e%game%"), player);
+        String joinTitle = messenger.replacePlaceholders(instance.getConfig().getString("join.title", "&a&l你画我猜"), player);
+        String joinSub = messenger.replacePlaceholders(instance.getConfig().getString("join.subtitle", "&7你已加入 &e%game%"), player);
         int fadeIn = instance.getConfig().getInt("join.fade-in", 10);
         int stay = instance.getConfig().getInt("join.stay", 40);
         int fadeOut = instance.getConfig().getInt("join.fade-out", 10);
@@ -346,15 +238,15 @@ public class Game {
             countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
             countdownStartTime = System.currentTimeMillis();
             scoreboard.startStartingScoreboard();
-            sendMsg("game-starting", "%time%", String.valueOf(countdownDuration));
+            messenger.sendMsg("game-starting", "%time%", String.valueOf(countdownDuration));
             TaskStart startTask = new TaskStart(this);
             startTask.runTaskLater(instance, countdownDuration * 20L);
             tasks.add(startTask);
             TaskXpCountdown xpTask = new TaskXpCountdown(this);
             xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
-            startCountdownBroadcast(countdownDuration);
+            messenger.startCountdownBroadcast(countdownDuration);
         }
-        updateSigns();
+        signManager.updateSigns();
     }
 
     public void leave(Player player) {
@@ -386,9 +278,9 @@ public class Game {
             player.removeMetadata("oldLoc", instance);
         }
         player.removeMetadata("inbmt", instance);
-        updateSigns();
+        signManager.updateSigns();
 
-        if (players > 0) sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
+        if (players > 0) messenger.sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         if (started && players <= 1 && !aftergameRunning) { cancelTasks(); stop(); }
         if (players <= 0) {
             waiting = false; countdownStartTime = 0; scoreboard.stopScoreboardTask();
@@ -412,9 +304,9 @@ public class Game {
         roundCount = 0;
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
-        sendStartedBroadcast();
+        messenger.sendStartedBroadcast();
         startRound();
-        updateSigns();
+        signManager.updateSigns();
         scoreboard.startGamingScoreboard();
         updateMotd();
     }
@@ -444,13 +336,13 @@ public class Game {
 
         if (builder == null) return;
 
-        playSoundsForAll(instance.getConfig().getStringList("game.newround.sounds"));
+        messenger.playSoundsForAll(instance.getConfig().getStringList("game.newround.sounds"));
 
         int roundTime = instance.getConfig().getInt("game.round-time", 75);
         List<Integer> gameBroadcastShowtime = instance.getConfig().getIntegerList("game.broadcast.showtime");
         if (gameBroadcastShowtime != null && !gameBroadcastShowtime.isEmpty()) {
             List<String> gameSoundList = instance.getConfig().getStringList("game.broadcast.sound");
-            runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false);
+            messenger.runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false);
         }
 
         List<Integer> hints = instance.getConfig().getIntegerList("game.hints");
@@ -461,7 +353,7 @@ public class Game {
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
         TaskXpCountdown xpTask = new TaskXpCountdown(this);
         xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
-        TaskAlert endMsg = new TaskAlert(formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
+        TaskAlert endMsg = new TaskAlert(messenger.formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
         endMsg.runTaskLater(instance, (roundTime - 5) * 20L); tasks.add(endMsg);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
@@ -476,7 +368,7 @@ public class Game {
         Random r = new Random();
         int idx = r.nextInt(word.length());
         wordf.setCharAt(idx, word.charAt(idx));
-        playSoundForAll(Sound.ITEM_PICKUP, 1.0f, 1.0f);
+        messenger.playSoundForAll(Sound.ITEM_PICKUP, 1.0f, 1.0f);
     }
 
     public void wordFoundBy(Player player) {
@@ -485,67 +377,32 @@ public class Game {
             return;
         }
         hasFound.add(player);
-        playSoundForAll(Sound.NOTE_PIANO, 1.0f, 1.0f);
+        messenger.playSoundForAll(Sound.NOTE_PIANO, 1.0f, 1.0f);
         int gained = 0;
         if (!wordHasBeenFound) {
-            sendMsg("first-found", "%player%", player.getName());
+            messenger.sendMsg("first-found", "%player%", player.getName());
             if (builder != null) ChatUtil.sendMsg(builder, "builder-found-notify");
             increaseScore(player, 3);
             gained = 3;
             if (builder != null) increaseScore(builder, 2);
             wordHasBeenFound = true;
         } else {
-            sendMsg("other-found", "%player%", player.getName());
+            messenger.sendMsg("other-found", "%player%", player.getName());
             increaseScore(player, 1);
             gained = 1;
         }
         roundGainedScore.put(player, roundGainedScore.containsKey(player) ? roundGainedScore.get(player) + gained : gained);
-        sendGuessedTitle(player);
+        messenger.sendGuessedTitle(player);
         playerFound++;
         int allFoundDelay = instance.getConfig().getInt("game.all-found-delay", 5);
         if (playerFound >= players - 1) {
-            sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
+            messenger.sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
             cancelTasks();
             roundEndTime = System.currentTimeMillis() + allFoundDelay * 1000L;
             TaskNextRound endRound = new TaskNextRound(this);
             endRound.runTaskLater(instance, allFoundDelay * 20L); tasks.add(endRound);
             TaskXpCountdown xpTask = new TaskXpCountdown(this);
             xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
-        }
-    }
-
-    private void sendGuessedTitle(Player player) {
-        String title = instance.getConfig().getString("game.guessed.title", null);
-        String subtitle = instance.getConfig().getString("game.guessed.subtitle", null);
-        if (title != null) title = replacePlaceholders(title, player);
-        if (subtitle != null) subtitle = replacePlaceholders(subtitle, player);
-        boolean hasTitle = title != null && !title.isEmpty();
-        boolean hasSub = subtitle != null && !subtitle.isEmpty();
-        if (!hasTitle && !hasSub) return;
-        int fadeIn = instance.getConfig().getInt("game.guessed.fade-in", 0);
-        int stay = instance.getConfig().getInt("game.guessed.stay", 20);
-        int fadeOut = instance.getConfig().getInt("game.guessed.fade-out", 10);
-        ChatUtil.sendTitle(player, hasTitle ? title : " ", hasSub ? subtitle : null, fadeIn, stay, fadeOut);
-    }
-
-    private void sendStartedBroadcast() {
-        sendMsg("game-started");
-        String title = instance.getConfig().getString("game.started.title", null);
-        String subtitle = instance.getConfig().getString("game.started.subtitle", null);
-        String soundStr = instance.getConfig().getString("game.started.sound", "NOTE_PLING,1,2");
-        int fadeIn = instance.getConfig().getInt("game.started.fade-in", 0);
-        int stay = instance.getConfig().getInt("game.started.stay", 40);
-        int fadeOut = instance.getConfig().getInt("game.started.fade-out", 10);
-        boolean hasTitle = title != null && !title.isEmpty();
-        boolean hasSub = subtitle != null && !subtitle.isEmpty();
-        if (hasTitle || hasSub) {
-            sendTitleToAll(hasTitle ? colorize(title) : null, hasSub ? colorize(subtitle) : null, fadeIn, stay, fadeOut);
-        }
-        if (soundStr != null && !soundStr.isEmpty()) {
-            try {
-                String[] sp = soundStr.split(",");
-                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
-            } catch (Exception ignored) {}
         }
     }
 
@@ -576,7 +433,7 @@ public class Game {
         String t1 = sorted.size() > 0 ? sorted.get(0).getName() : "-";
         String t2 = sorted.size() > 1 ? sorted.get(1).getName() : "-";
         String t3 = sorted.size() > 2 ? sorted.get(2).getName() : "-";
-        sendMsg("end-top", "%t1player%", t1, "%t2player%", t2, "%t3player%", t3);
+        messenger.sendMsg("end-top", "%t1player%", t1, "%t2player%", t2, "%t3player%", t3);
         startAftergame();
     }
 
@@ -603,8 +460,8 @@ public class Game {
                 if (spawn != null) other.teleport(spawn);
             }
         }
-        sendMsg("round-started", "%builder_player%", p.getName());
-        String showMsg = formatMsg("show-paintname", builder, "%paintname%", word);
+        messenger.sendMsg("round-started", "%builder_player%", p.getName());
+        String showMsg = messenger.formatMsg("show-paintname", builder, "%paintname%", word);
         if (showMsg.contains("\n")) {
             for (String line : showMsg.split("\n")) builder.sendMessage(line);
         } else {
@@ -616,50 +473,6 @@ public class Game {
         if (score.containsKey(p)) {
             score.put(p, score.get(p) + value);
         }
-    }
-
-    private void runCountdownBroadcast(int totalTime, List<Integer> showtime, List<String> soundList, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning) {
-        if (showtime == null || showtime.isEmpty()) return;
-        for (int idx = 0; idx < showtime.size(); idx++) {
-            final int t = showtime.get(idx);
-            if (t > totalTime) continue;
-            final String fs = soundList != null && idx < soundList.size() ? soundList.get(idx) : null;
-            final String ft = titleStr;
-            final String fst = subtitleStr;
-            final int timeLeft = t;
-            new BukkitRunnable() {
-                public void run() {
-                    if (checkRunning ? !aftergameRunning : !waiting) { cancel(); return; }
-                    broadcastCountdown(timeLeft, fs, ft, fst, fadeIn, stay, fadeOut, timePlaceholder);
-                }
-            }.runTaskLater(instance, (totalTime - t) * 20L);
-        }
-    }
-
-    private void broadcastCountdown(int timeLeft, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder) {
-        if (soundStr != null && !soundStr.isEmpty()) {
-            try {
-                String[] sp = soundStr.split(",");
-                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
-            } catch (Exception ignored) {}
-        }
-        String title = titleStr != null ? colorize(titleStr.replace(timePlaceholder, String.valueOf(timeLeft))) : null;
-        String subtitle = subtitleStr != null ? colorize(subtitleStr.replace(timePlaceholder, String.valueOf(timeLeft))) : null;
-        if ((title != null && !title.isEmpty()) || (subtitle != null && !subtitle.isEmpty())) {
-            sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
-        }
-    }
-
-    private void startCountdownBroadcast(int totalTime) {
-        List<Integer> showtime = instance.getConfig().getIntegerList("beforestart.showtime");
-        if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
-        List<String> soundList = instance.getConfig().getStringList("beforestart.broadcast.sound");
-        String titleStr = instance.getConfig().getString("beforestart.broadcast.title", "&6&l游戏将在 %time% 秒后开始");
-        String subtitleStr = instance.getConfig().getString("beforestart.broadcast.subtitle", null);
-        int fadeIn = instance.getConfig().getInt("beforestart.broadcast.fade-in", 20);
-        int stay = instance.getConfig().getInt("beforestart.broadcast.stay", 40);
-        int fadeOut = instance.getConfig().getInt("beforestart.broadcast.fade-out", 20);
-        runCountdownBroadcast(totalTime, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%time%", false);
     }
 
     private void startAftergame() {
@@ -677,7 +490,7 @@ public class Game {
         int fadeIn = instance.getConfig().getInt("aftergame.broadcast.fade-in", 5);
         int stay = instance.getConfig().getInt("aftergame.broadcast.stay", 10);
         int fadeOut = instance.getConfig().getInt("aftergame.broadcast.fade-out", 5);
-        runCountdownBroadcast(aftergameDuration, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true);
+        messenger.runCountdownBroadcast(aftergameDuration, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true);
         new BukkitRunnable() {
             public void run() { stopAftergame(); }
         }.runTaskLater(instance, aftergameDuration * 20L);
@@ -731,77 +544,16 @@ public class Game {
         updateMotd();
     }
 
-    public void registerSign(Block block, String display) {
-        if (block.getState() instanceof Sign) { signs.add(block); block.setMetadata("bmtjoinsign", new org.bukkit.metadata.FixedMetadataValue(instance, getName())); updateSigns(); }
-    }
+    public void sendMessage(String message) { messenger.sendMessage(message); }
+    public void sendMsg(String key, String... replacements) { messenger.sendMsg(key, replacements); }
 
-    public void removeSign(Block block) {
-        if (block.getState() instanceof Sign) { signs.remove(block); if (block.hasMetadata("bmtjoinsign")) block.removeMetadata("bmtjoinsign", instance); }
-    }
+    public void registerSign(Block block, String display) { signManager.registerSign(block, display); }
+    public void removeSign(Block block) { signManager.removeSign(block); }
+    public void updateSigns() { signManager.updateSigns(); }
 
-    public void updateSigns() {
-        for (Block b : signs) {
-            if (b.getState() instanceof Sign) {
-                Sign s = (Sign) b.getState();
-                s.setLine(0, colorize(instance.getMsgConfig().getString("sign-line-0", "&6[DMT]")));
-                s.setLine(1, colorize(instance.getMsgConfig().getString("sign-join-line-1", "&e%game%").replace("%game%", getName())));
-                s.setLine(2, colorize(instance.getMsgConfig().getString("sign-join-line-2", "&7%count%/%max%").replace("%count%", String.valueOf(players)).replace("%max%", String.valueOf(maxplayers))));
-                s.setLine(3, started ? colorize(instance.getMsgConfig().getString("sign-join-line-3-ingame", "&c游戏中")) : colorize(instance.getMsgConfig().getString("sign-join-line-3-join", "&a加入")));
-                s.update();
-            }
-        }
-    }
-
-    public void save(FileConfiguration file) {
-        String path = "games." + getName();
-        file.set(path + ".region", region);
-        file.set(path + ".builderspawn", bspawn != null ? LocationUtil.LocationToString(bspawn) : "");
-        file.set(path + ".spawn", spawn != null ? LocationUtil.LocationToString(spawn) : "");
-        file.set(path + ".lobby", lobby != null ? LocationUtil.LocationToString(lobby) : "");
-        if (paintingPos1 != null) file.set(path + ".painting.pos1", LocationUtil.LocationToString(paintingPos1));
-        else if (buildzone != null) file.set(path + ".painting.pos1", LocationUtil.LocationToString(buildzone.getCorner1().getLocation()));
-        else file.set(path + ".painting.pos1", "");
-        if (paintingPos2 != null) file.set(path + ".painting.pos2", LocationUtil.LocationToString(paintingPos2));
-        else if (buildzone != null) file.set(path + ".painting.pos2", LocationUtil.LocationToString(buildzone.getCorner2().getLocation()));
-        else file.set(path + ".painting.pos2", "");
-        file.set(path + ".min-player", minplayers);
-        file.set(path + ".max-player", maxplayers);
-        file.set(path + ".builder-boundary.pos1", builderBoundaryPos1 != null ? LocationUtil.LocationToString(builderBoundaryPos1) : "");
-        file.set(path + ".builder-boundary.pos2", builderBoundaryPos2 != null ? LocationUtil.LocationToString(builderBoundaryPos2) : "");
-    }
-
+    public void save(FileConfiguration file) { GameSerializer.save(this, file); }
     public void remove(FileConfiguration file) { stop(); file.set("games." + getName(), null); }
 
-    public static Game load(FileConfiguration file, String name, DrawMyThing instance) {
-        String path = "games." + name;
-        if (file.getString(path + ".region") == null) return null;
-        String region = file.getString(path + ".region", "world");
-        Location spawn = LocationUtil.StringToLoc(file.getString(path + ".spawn", ""));
-        Location bspawn = LocationUtil.StringToLoc(file.getString(path + ".builderspawn", ""));
-        Location lobby = LocationUtil.StringToLoc(file.getString(path + ".lobby", ""));
-
-        CuboidZone zone = null;
-        Location pos1 = null, pos2 = null;
-        String pos1Str = file.getString(path + ".painting.pos1", "");
-        String pos2Str = file.getString(path + ".painting.pos2", "");
-        if (pos1Str != null && !pos1Str.isEmpty()) pos1 = LocationUtil.StringToLoc(pos1Str);
-        if (pos2Str != null && !pos2Str.isEmpty()) pos2 = LocationUtil.StringToLoc(pos2Str);
-        if (pos1 != null && pos2 != null) zone = new CuboidZone(pos1.getBlock(), pos2.getBlock());
-
-        Game game = new Game(zone, spawn, bspawn, name, region, instance);
-        if (lobby != null) game.setLobby(lobby);
-        if (pos1 != null) game.setPaintingPos1(pos1);
-        if (pos2 != null) game.setPaintingPos2(pos2);
-        game.setMinPlayers(file.getInt(path + ".min-player", 2));
-        game.setMaxPlayers(file.getInt(path + ".max-player", 12));
-        String bbp1 = file.getString(path + ".builder-boundary.pos1", "");
-        String bbp2 = file.getString(path + ".builder-boundary.pos2", "");
-        if (bbp1 != null && !bbp1.isEmpty()) game.setBuilderBoundaryPos1(LocationUtil.StringToLoc(bbp1));
-        if (bbp2 != null && !bbp2.isEmpty()) game.setBuilderBoundaryPos2(LocationUtil.StringToLoc(bbp2));
-        return game;
-    }
-
-    public static Game createEmpty(String name, World world, DrawMyThing instance) {
-        return new Game(null, null, null, name, world.getName(), instance);
-    }
+    public static Game load(FileConfiguration file, String name, DrawMyThing instance) { return GameSerializer.load(file, name, instance); }
+    public static Game createEmpty(String name, World world, DrawMyThing instance) { return GameSerializer.createEmpty(name, world, instance); }
 }

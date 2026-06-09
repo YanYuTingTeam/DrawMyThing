@@ -2,6 +2,7 @@ package com.mrstart.dmt.game;
 
 import com.mrstart.dmt.ChatUtil;
 import com.mrstart.dmt.DrawMyThing;
+import com.mrstart.dmt.ItemManager;
 import com.mrstart.dmt.cuboid.CuboidZone;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -178,7 +179,7 @@ public class GameListener implements Listener {
 
         if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
             if (isPencilItem(item) || isBigPencilItem(item) || isColorPickerItem(item)) {
-                player.openInventory(instance.cci);
+                player.openInventory(instance.getItemManager().cci);
             } else {
                 cancelPaintTask(player);
             }
@@ -293,13 +294,13 @@ public class GameListener implements Listener {
     public void onInvClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
         if (!isInGame(player)) return;
-        if (event.getInventory().equals(instance.cci)) {
+        if (event.getInventory().equals(instance.getItemManager().cci)) {
             event.setCancelled(true);
             if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR) return;
             ItemStack clicked = event.getCurrentItem();
             if (clicked.getType() == Material.WOOL) {
                 byte woolData = (byte)clicked.getDurability();
-                pencilColor = DrawMyThing.woolDataToDyeColor(woolData);
+                pencilColor = ItemManager.woolDataToDyeColor(woolData);
                 player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1.0f, 1.0f);
             }
             player.closeInventory();

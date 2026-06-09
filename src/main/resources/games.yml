@@ -9,3 +9,6 @@ games:
       pos2: world:46:60:41:-86.88109:89.332695
     min-player: 2
     max-player: 5
+    builder-boundary:
+      pos1: world:0:58:36:271.5867:3.1362765
+      pos2: world:39:26:-18:267.24924:7.273478
