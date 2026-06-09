@@ -71,8 +71,6 @@ public class DrawMyThing extends JavaPlugin {
         getLogger().info("DrawMyThing has been disabled!");
     }
 
-    // ============ 配置文件 ============
-
     private void setupGamesFile() {
         gamesFile = new File(getDataFolder(), "games.yml");
         if (!gamesFile.exists()) { gamesFile.getParentFile().mkdirs(); saveResource("games.yml", false); }
@@ -126,8 +124,6 @@ public class DrawMyThing extends JavaPlugin {
 
     public List<Game> getGames() { return games; }
 
-    // ============ 可配置物品 ============
-
     private void initItems() {
         leaveItem = buildItemFromConfig("item.leave", Material.BED, (short) 14, "&c返回大厅", null);
         pencilItem = buildItemFromConfig("item.pencil", Material.STICK, (short) 0, "&b铅笔", null);
@@ -177,8 +173,6 @@ public class DrawMyThing extends JavaPlugin {
     public ItemStack getEraserItem() { return eraserItem; }
     public ItemStack getColorPickerItem() { return colorPickerItem; }
 
-    // ============ 颜色选择GUI ============
-
     private void initColorItems() {
         cci.clear();
         ConfigurationSection colorSection = getConfig().getConfigurationSection("color-picker.colors");
@@ -214,8 +208,6 @@ public class DrawMyThing extends JavaPlugin {
         return DyeColor.WHITE;
     }
 
-    // ============ 命令 ============
-
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!cmd.getName().equalsIgnoreCase("dmt")) return false;
@@ -225,7 +217,6 @@ public class DrawMyThing extends JavaPlugin {
         if (args.length == 0) { sendHelp(player); return true; }
 
         switch (args[0].toLowerCase()) {
-            // ---- 需要 gameName 参数的坐标命令 ----
             case "setcanvaspos1":
                 if (!checkAdmin(player)) return true;
                 handleSetPos(player, args, 1);
@@ -246,8 +237,6 @@ public class DrawMyThing extends JavaPlugin {
                 if (!checkAdmin(player)) return true;
                 handleSetLobby(player, args);
                 break;
-
-            // ---- 游戏管理 ----
             case "create":
                 if (!checkAdmin(player)) return true;
                 handleCreate(player, args);
@@ -268,8 +257,6 @@ public class DrawMyThing extends JavaPlugin {
                 if (!checkAdmin(player)) return true;
                 handleReload(player);
                 break;
-
-            // ---- 玩家命令 ----
             case "join":
                 handleJoin(player, args);
                 break;

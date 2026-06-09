@@ -43,6 +43,7 @@ public class Game {
     private int minplayers = 2;
     private int maxplayers = 12;
     private int buildPerPlayer = 2;
+    private int roundCount = 0;
     private String word;
     private StringBuilder wordf;
     private boolean started = false;
@@ -118,6 +119,8 @@ public class Game {
         result = result.replace("%max%", String.valueOf(maxplayers));
         result = result.replace("%min%", String.valueOf(minplayers));
         result = result.replace("%starttime%", String.valueOf(getStartTime()));
+        result = result.replace("%round_now%", String.valueOf(roundCount));
+        result = result.replace("%round_all%", String.valueOf(buildPerPlayer * score.size()));
         if (player != null) {
             result = result.replace("%player%", player.getName());
             if (score.containsKey(player)) result = result.replace("%score%", String.valueOf(score.get(player)));
@@ -284,7 +287,9 @@ public class Game {
         waiting = false;
         countdownStartTime = 0;
         word = null;
-        if (players < 3) buildPerPlayer = 3;
+        buildPerPlayer = instance.getConfig().getInt("game.build-per-player", 2);
+        if (players < 3) buildPerPlayer = Math.max(buildPerPlayer, 3);
+        roundCount = 0;
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
         playSoundForAll(Sound.NOTE_PIANO, 1.0f, 1.0f);
@@ -294,6 +299,7 @@ public class Game {
     }
 
     public void startRound() {
+        roundCount++;
         if (word != null) sendMsg("word-was", "%word%", word);
         cancelTasks();
         wordHasBeenFound = false;

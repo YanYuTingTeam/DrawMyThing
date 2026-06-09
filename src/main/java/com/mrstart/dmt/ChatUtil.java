@@ -29,9 +29,6 @@ public class ChatUtil {
         player.sendMessage(getPrefix() + colorize(message));
     }
 
-    /**
-     * 获取配置中的消息并替换占位符
-     */
     public static String getMessage(String key, String... replacements) {
         if (plugin == null) return key;
         String msg = plugin.getMsgConfig().getString(key, key);
@@ -42,14 +39,9 @@ public class ChatUtil {
         return msg;
     }
 
-    /**
-     * 发送配置中的消息给玩家（带前缀+占位符替换）
-     */
     public static void sendMsg(Player player, String key, String... replacements) {
         player.sendMessage(getPrefix() + getMessage(key, replacements));
     }
-
-    // ============ NMS Title / Actionbar (1.8) ============
 
     private static String nmsVersion = null;
 
@@ -65,9 +57,6 @@ public class ChatUtil {
         return Class.forName("net.minecraft.server." + getNmsVersion() + "." + name);
     }
 
-    /**
-     * 发送 Title 给玩家 (1.8 NMS)
-     */
     public static void sendTitle(Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
         try {
             Class<?> packetTitleClass = getNMSClass("PacketPlayOutTitle");
@@ -75,12 +64,10 @@ public class ChatUtil {
             Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
             Class<?> chatComponent = getNMSClass("IChatBaseComponent");
 
-            // 发送时间包
             Object timingPacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent, int.class, int.class, int.class)
                     .newInstance(enumTitleAction.getEnumConstants()[2], null, fadeIn, stay, fadeOut);
             sendPacket(player, timingPacket);
 
-            // 发送 Title
             if (title != null && !title.isEmpty()) {
                 Method aMethod = chatSerializer.getMethod("a", String.class);
                 Object titleComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(title) + "\"}");
@@ -89,7 +76,6 @@ public class ChatUtil {
                 sendPacket(player, titlePacket);
             }
 
-            // 发送 Subtitle
             if (subtitle != null && !subtitle.isEmpty()) {
                 Method aMethod = chatSerializer.getMethod("a", String.class);
                 Object subtitleComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(subtitle) + "\"}");
@@ -98,7 +84,6 @@ public class ChatUtil {
                 sendPacket(player, subtitlePacket);
             }
         } catch (Exception e) {
-            // 降级：直接发消息
             if (title != null && !title.isEmpty()) {
                 player.sendMessage(colorize(title));
             }
@@ -108,9 +93,6 @@ public class ChatUtil {
         }
     }
 
-    /**
-     * 发送 Actionbar 给玩家 (1.8 NMS)
-     */
     public static void sendActionBar(Player player, String message) {
         try {
             Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
@@ -118,15 +100,12 @@ public class ChatUtil {
 
             Method aMethod = chatSerializer.getMethod("a", String.class);
             Object chatComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(message) + "\"}");
-
-            // 1.8 PacketPlayOutChat(IChatBaseComponent, byte) — byte=2 为 actionbar
             Object packet = packetChatClass.getConstructor(
                     getNMSClass("IChatBaseComponent"), byte.class)
                     .newInstance(chatComponent, (byte) 2);
 
             sendPacket(player, packet);
         } catch (Exception e) {
-            // 降级
             player.sendMessage(colorize(message));
         }
     }
