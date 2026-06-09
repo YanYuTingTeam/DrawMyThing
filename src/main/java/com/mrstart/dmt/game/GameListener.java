@@ -20,12 +20,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 public class GameListener implements Listener {
     private DyeColor pencilColor = DyeColor.BLACK;
     private DrawMyThing instance;
+    private Map<Player, BukkitTask> paintTasks = new HashMap<Player, BukkitTask>();
 
     public GameListener(DrawMyThing instance) {
         this.instance = instance;
@@ -34,6 +38,7 @@ public class GameListener implements Listener {
     @EventHandler
     public void onPlayerLogOut(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        cancelPaintTask(player);
         if (player.hasMetadata("inbmt")) {
             String gameName = getMeta(player, "inbmt");
             Game game = instance.getGameByName(gameName);
@@ -116,14 +121,17 @@ public class GameListener implements Listener {
         }
 
         if (isPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            cancelPaintTask(player);
             Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
             if (b.getType() != Material.WOOL) return;
             b.setTypeIdAndData(Material.WOOL.getId(), pencilColor.getData(), true);
             playToolSound(player);
+            startPaintTask(player, game, false);
             return;
         }
 
         if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            cancelPaintTask(player);
             Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
             if (b.getType() != Material.WOOL) return;
             CuboidZone zone = game.getBuildZone();
@@ -139,6 +147,7 @@ public class GameListener implements Listener {
             if (zone == null || zone.contains(up)) up.setTypeIdAndData(Material.WOOL.getId(), data, true);
             if (zone == null || zone.contains(down)) down.setTypeIdAndData(Material.WOOL.getId(), data, true);
             playToolSound(player);
+            startPaintTask(player, game, true);
             return;
         }
 
@@ -212,6 +221,43 @@ public class GameListener implements Listener {
             event.setCancelled(true);
             player.closeInventory();
         }
+    }
+
+    @EventHandler
+    public void onPlayerItemHeldChange(PlayerItemHeldEvent event) {
+        cancelPaintTask(event.getPlayer());
+    }
+
+    private void startPaintTask(final Player player, final Game game, final boolean big) {
+        BukkitTask task = new BukkitRunnable() {
+            public void run() {
+                if (!player.isOnline() || !isInGame(player)) { cancelPaintTask(player); return; }
+                ItemStack hand = player.getItemInHand();
+                if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
+                Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
+                if (b.getType() != Material.WOOL) return;
+                CuboidZone zone = game.getBuildZone();
+                if (zone != null && !zone.contains(b)) return;
+                byte data = pencilColor.getData();
+                b.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                if (big) {
+                    Block right = b.getRelative(1, 0, 0);
+                    Block left = b.getRelative(-1, 0, 0);
+                    Block up = b.getRelative(0, 1, 0);
+                    Block down = b.getRelative(0, -1, 0);
+                    if (zone == null || zone.contains(right)) right.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    if (zone == null || zone.contains(left)) left.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    if (zone == null || zone.contains(up)) up.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                    if (zone == null || zone.contains(down)) down.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                }
+            }
+        }.runTaskTimer(instance, 2L, 2L);
+        paintTasks.put(player, task);
+    }
+
+    private void cancelPaintTask(Player player) {
+        BukkitTask task = paintTasks.remove(player);
+        if (task != null) task.cancel();
     }
 
     private boolean matchItem(ItemStack item, String configPath, Material defaultMat, short defaultData) {
