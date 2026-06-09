@@ -220,6 +220,13 @@ public class Game {
         player.getInventory().clear();
         giveWaitingItems(player);
 
+        String joinTitle = replacePlaceholders(instance.getConfig().getString("join.title", "&a&l你画我猜"), player);
+        String joinSub = replacePlaceholders(instance.getConfig().getString("join.subtitle", "&7你已加入 &e%game%"), player);
+        int fadeIn = instance.getConfig().getInt("join.fade-in", 10);
+        int stay = instance.getConfig().getInt("join.stay", 40);
+        int fadeOut = instance.getConfig().getInt("join.fade-out", 10);
+        ChatUtil.sendTitle(player, joinTitle, joinSub, fadeIn, stay, fadeOut);
+
         player.setMetadata("inbmt", new org.bukkit.metadata.FixedMetadataValue(instance, getName()));
         player.setScoreboard(board);
 

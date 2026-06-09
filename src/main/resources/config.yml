@@ -153,10 +153,23 @@ scoreboard:
     title: '&a&l你&2&l画&a&l我&2&l猜'
     content:
       - ''
-      - '&a%player%: &e%score%'
+      - '&e&l回合'
+      - '&f%round_now%/%round_all%'
       - ''
+      - '&6&l画手'
+      - '&f'
+      - ''
+      - '&e%score% &f%player%'
+      - '&f--------------'
 
 autojoin:
   enabled: false
   randomjoin: false
   joingame: ''
+
+join:
+  title: '&a&l你&2&l画&a&l我&2&l猜'
+  subtitle: '&7你加入了地图 %game%.'
+  fade-in: 0
+  stay: 40
+  fade-out: 20
