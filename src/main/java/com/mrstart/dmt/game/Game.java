@@ -55,6 +55,8 @@ public class Game {
     private int aftergameDuration = 0;
     private long roundEndTime = 0;
     private long builderFreezeEndTime = 0;
+    private Location builderBoundaryPos1;
+    private Location builderBoundaryPos2;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
     private boolean acceptWords = true;
     private List<Block> signs = new ArrayList<Block>();
@@ -116,6 +118,23 @@ public class Game {
     public int getAftergameRemaining() { return getEndTime(); }
     public long getRoundEndTime() { return roundEndTime; }
     public long getBuilderFreezeEndTime() { return builderFreezeEndTime; }
+
+    public Location getBuilderBoundaryPos1() { return builderBoundaryPos1; }
+    public Location getBuilderBoundaryPos2() { return builderBoundaryPos2; }
+    public void setBuilderBoundaryPos1(Location loc) { this.builderBoundaryPos1 = loc; }
+    public void setBuilderBoundaryPos2(Location loc) { this.builderBoundaryPos2 = loc; }
+
+    public boolean isInBuilderBoundary(Location loc) {
+        if (builderBoundaryPos1 == null || builderBoundaryPos2 == null || loc == null) return true;
+        int minX = Math.min(builderBoundaryPos1.getBlockX(), builderBoundaryPos2.getBlockX());
+        int minY = Math.min(builderBoundaryPos1.getBlockY(), builderBoundaryPos2.getBlockY());
+        int minZ = Math.min(builderBoundaryPos1.getBlockZ(), builderBoundaryPos2.getBlockZ());
+        int maxX = Math.max(builderBoundaryPos1.getBlockX(), builderBoundaryPos2.getBlockX());
+        int maxY = Math.max(builderBoundaryPos1.getBlockY(), builderBoundaryPos2.getBlockY());
+        int maxZ = Math.max(builderBoundaryPos1.getBlockZ(), builderBoundaryPos2.getBlockZ());
+        int x = loc.getBlockX(), y = loc.getBlockY(), z = loc.getBlockZ();
+        return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
+    }
 
     /**
      * 统一占位符替换（不做着色，着色由调用方处理）
@@ -747,6 +766,8 @@ public class Game {
         else file.set(path + ".painting.pos2", "");
         file.set(path + ".min-player", minplayers);
         file.set(path + ".max-player", maxplayers);
+        file.set(path + ".builder-boundary.pos1", builderBoundaryPos1 != null ? LocationUtil.LocationToString(builderBoundaryPos1) : "");
+        file.set(path + ".builder-boundary.pos2", builderBoundaryPos2 != null ? LocationUtil.LocationToString(builderBoundaryPos2) : "");
     }
 
     public void remove(FileConfiguration file) { stop(); file.set("games." + getName(), null); }
@@ -773,6 +794,10 @@ public class Game {
         if (pos2 != null) game.setPaintingPos2(pos2);
         game.setMinPlayers(file.getInt(path + ".min-player", 2));
         game.setMaxPlayers(file.getInt(path + ".max-player", 12));
+        String bbp1 = file.getString(path + ".builder-boundary.pos1", "");
+        String bbp2 = file.getString(path + ".builder-boundary.pos2", "");
+        if (bbp1 != null && !bbp1.isEmpty()) game.setBuilderBoundaryPos1(LocationUtil.StringToLoc(bbp1));
+        if (bbp2 != null && !bbp2.isEmpty()) game.setBuilderBoundaryPos2(LocationUtil.StringToLoc(bbp2));
         return game;
     }
 

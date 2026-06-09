@@ -36,6 +36,8 @@ pos2-set: '&a画布坐标2已设置'
 spawn-set: '&a观战出生点已设置'
 builder-spawn-set: '&a绘画者出生点已设置'
 lobby-set: '&a等待大厅位置已设置'
+build-boundary-pos1-set: '&a绘画者边界坐标1已设置'
+build-boundary-pos2-set: '&a绘画者边界坐标2已设置'
 
 game-full: '&c游戏已满！'
 game-already-started: '&c游戏已经开始！'

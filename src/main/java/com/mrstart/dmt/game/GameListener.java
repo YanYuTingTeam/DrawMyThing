@@ -78,24 +78,33 @@ public class GameListener implements Listener {
         Game game = getGame(player);
         if (game == null || !game.isStarted()) return;
         if (game.getBuilder() == null || !game.getBuilder().equals(player)) return;
-        long freezeEnd = game.getBuilderFreezeEndTime();
-        if (freezeEnd <= 0 || System.currentTimeMillis() >= freezeEnd) return;
         if (event.getFrom().getBlockX() == event.getTo().getBlockX()
                 && event.getFrom().getBlockY() == event.getTo().getBlockY()
                 && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
-        event.setTo(event.getFrom());
-        long now = System.currentTimeMillis();
-        Long last = freezeSoundCooldown.get(player);
-        if (last == null || now - last >= 500) {
-            freezeSoundCooldown.put(player, now);
-            String soundStr = instance.getConfig().getString("game.builderToPlanter.sound", "NOTE_BASS,1,1");
-            try {
-                String[] sp = soundStr.split(",");
-                Sound sound = Sound.valueOf(sp[0].trim());
-                float volume = sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f;
-                float pitch = sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f;
-                player.playSound(player.getLocation(), sound, volume, pitch);
-            } catch (Exception ignored) {}
+
+        long freezeEnd = game.getBuilderFreezeEndTime();
+        boolean frozen = freezeEnd > 0 && System.currentTimeMillis() < freezeEnd;
+        boolean outOfBounds = !game.isInBuilderBoundary(event.getTo());
+
+        if (frozen || outOfBounds) {
+            event.setTo(event.getFrom());
+            long now = System.currentTimeMillis();
+            Long last = freezeSoundCooldown.get(player);
+            if (last == null || now - last >= 500) {
+                freezeSoundCooldown.put(player, now);
+                String soundStr = instance.getConfig().getString("game.builderToPlanter.sound", "NOTE_BASS,1,1");
+                try {
+                    String[] sp = soundStr.split(",");
+                    Sound sound = Sound.valueOf(sp[0].trim());
+                    float volume = sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f;
+                    float pitch = sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f;
+                    player.playSound(player.getLocation(), sound, volume, pitch);
+                } catch (Exception ignored) {}
+            }
+            if (outOfBounds && !frozen) {
+                Location bspawn = game.getBuilderSpawn();
+                if (bspawn != null) player.teleport(bspawn);
+            }
         }
     }
 

@@ -239,6 +239,14 @@ public class DrawMyThing extends JavaPlugin {
                 if (!checkAdmin(player)) return true;
                 handleSetSpawn(player, args, "builderspawn");
                 break;
+            case "setbuildpos1":
+                if (!checkAdmin(player)) return true;
+                handleSetBuildBoundary(player, args, 1);
+                break;
+            case "setbuildpos2":
+                if (!checkAdmin(player)) return true;
+                handleSetBuildBoundary(player, args, 2);
+                break;
             case "setlobby":
                 if (!checkAdmin(player)) return true;
                 handleSetLobby(player, args);
@@ -357,6 +365,29 @@ public class DrawMyThing extends JavaPlugin {
     }
 
     /**
+     * /dmt setbuildpos1 <gameName>  — 设置绘画者边界坐标1
+     * /dmt setbuildpos2 <gameName>  — 设置绘画者边界坐标2
+     */
+    private void handleSetBuildBoundary(Player player, String[] args, int posIndex) {
+        if (args.length < 2) { ChatUtil.sendMsg(player, "game-name-required"); return; }
+        String gameName = joinArgs(args, 1);
+        Game game = getGameByName(gameName);
+        if (game == null) { ChatUtil.sendMsg(player, "game-not-found", "%game%", gameName); return; }
+
+        Location loc = player.getLocation();
+        if (posIndex == 1) {
+            game.setBuilderBoundaryPos1(loc);
+            ChatUtil.sendMsg(player, "build-boundary-pos1-set", "%game%", gameName);
+        } else {
+            game.setBuilderBoundaryPos2(loc);
+            ChatUtil.sendMsg(player, "build-boundary-pos2-set", "%game%", gameName);
+        }
+
+        game.save(gamesConfig);
+        saveGamesFile();
+    }
+
+    /**
      * /dmt setlobby <gameName> — 设置等待大厅位置
      */
     private void handleSetLobby(Player player, String[] args) {
@@ -466,6 +497,8 @@ public class DrawMyThing extends JavaPlugin {
             player.sendMessage(ChatUtil.colorize("&f/dmt setcanvaspos2 <gameName> &7- 设置画布坐标2"));
             player.sendMessage(ChatUtil.colorize("&f/dmt setspawn <gameName> &7- 设置观战出生点"));
             player.sendMessage(ChatUtil.colorize("&f/dmt setbuilderspawn <gameName> &7- 设置绘画者出生点"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setbuildpos1 <gameName> &7- 设置绘画者边界坐标1"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setbuildpos2 <gameName> &7- 设置绘画者边界坐标2"));
             player.sendMessage(ChatUtil.colorize("&f/dmt setlobby <gameName> &7- 设置等待大厅位置"));
             player.sendMessage(ChatUtil.colorize("&f/dmt setmin <gameName> <amount> &7- 设置最少开始人数"));
             player.sendMessage(ChatUtil.colorize("&f/dmt setmax <gameName> <amount> &7- 设置最大人数"));
