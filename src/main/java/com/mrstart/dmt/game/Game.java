@@ -91,8 +91,15 @@ public class Game {
         String invisible = "§" + (char) ('0' + (objectiveIndex % 10));
         objectiveIndex++;
         Team t = board.registerNewTeam("t" + objectiveIndex);
-        t.setPrefix(display);
-        t.setSuffix("");
+        if (display.length() <= 16) {
+            t.setPrefix(display);
+            t.setSuffix("");
+        } else {
+            int split = 16;
+            if (split > 0 && display.charAt(split - 1) == '§') split--;
+            t.setPrefix(display.substring(0, split));
+            t.setSuffix(display.substring(split));
+        }
         t.addEntry(invisible);
         objective.getScore(invisible).setScore(scoreVal);
     }
@@ -506,7 +513,12 @@ public class Game {
                 fp.setDisplayName(ChatColor.RED + "[BUILDER] " + fp.getName());
             }
         }.runTaskLater(instance, delay * 20L);
-        for (Player other : score.keySet()) { if (!other.equals(p)) giveWaitingItems(other); }
+        for (Player other : score.keySet()) {
+            if (!other.equals(p)) {
+                giveWaitingItems(other);
+                if (spawn != null) other.teleport(spawn);
+            }
+        }
         sendMsg("round-started", "%builder_player%", p.getName());
         ChatUtil.sendMsg(builder, "show-paintname", "%paintname%", word);
     }

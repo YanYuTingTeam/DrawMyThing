@@ -2,6 +2,7 @@ package com.mrstart.dmt.game;
 
 import com.mrstart.dmt.ChatUtil;
 import com.mrstart.dmt.DrawMyThing;
+import com.mrstart.dmt.cuboid.CuboidZone;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -125,12 +126,18 @@ public class GameListener implements Listener {
         if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
             if (b.getType() != Material.WOOL) return;
+            CuboidZone zone = game.getBuildZone();
+            if (zone != null && !zone.contains(b)) return;
             byte data = pencilColor.getData();
             b.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            b.getRelative(1, 0, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
-            b.getRelative(-1, 0, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
-            b.getRelative(0, 1, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
-            b.getRelative(0, -1, 0).setTypeIdAndData(Material.WOOL.getId(), data, true);
+            Block right = b.getRelative(1, 0, 0);
+            Block left = b.getRelative(-1, 0, 0);
+            Block up = b.getRelative(0, 1, 0);
+            Block down = b.getRelative(0, -1, 0);
+            if (zone == null || zone.contains(right)) right.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            if (zone == null || zone.contains(left)) left.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            if (zone == null || zone.contains(up)) up.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            if (zone == null || zone.contains(down)) down.setTypeIdAndData(Material.WOOL.getId(), data, true);
             playToolSound(player);
             return;
         }
