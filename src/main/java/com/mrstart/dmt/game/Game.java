@@ -75,7 +75,7 @@ public class Game {
         board = manager.getNewScoreboard();
         objective = board.registerNewObjective(name + "_points", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getMsgConfig().getString("gaming-scoreboard-title", "&6分数")));
+        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.gaming.title", "&6分数")));
     }
 
     private String colorize(String s) { return ChatUtil.colorize(s); }
@@ -535,7 +535,7 @@ public class Game {
         objectiveIndex = 0;
         objective = board.registerNewObjective(name + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getMsgConfig().getString("waiting-scoreboard-title", "&6等待中")));
+        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中")));
         int refresh = instance.getConfig().getInt("scoreboard.waiting.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (waiting || started) { cancel(); return; } updateWaitingScoreboard(); }
@@ -548,7 +548,7 @@ public class Game {
         objectiveIndex = 0;
         objective = board.registerNewObjective(name + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getMsgConfig().getString("starting-scoreboard-title", "&6开始中")));
+        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.starting.title", "&6开始中")));
         int refresh = instance.getConfig().getInt("scoreboard.starting.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (!waiting || started) { cancel(); return; } updateStartingScoreboard(); }
@@ -561,7 +561,7 @@ public class Game {
         objectiveIndex = 0;
         objective = board.registerNewObjective(name + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(colorize(instance.getMsgConfig().getString("gaming-scoreboard-title", "&6分数")));
+        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.gameing.title", "&6分数")));
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (!started) { cancel(); return; } updateGamingScoreboard(); }

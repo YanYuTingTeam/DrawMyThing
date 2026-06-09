@@ -113,15 +113,14 @@ beforestart:
   showtime: [5, 4, 3, 2, 1]
 
 game:
-  round-time: 75
+  round-time: 85
   hints:
-    - 40
-    - 50
-    - 55
+    - 30
+    - 60
   actionbar: '&f&l提示 &r&f- %tip%'
   builder-actionbar: '&e&l题目: &r&f%paintname%'
-  builder-teleport-delay: 1
-  round: 2
+  builder-teleport-delay: 0
+  round: 3
   started:
     title: ''
     subtitle: ''
