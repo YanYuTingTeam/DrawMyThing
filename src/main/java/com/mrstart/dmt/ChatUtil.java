@@ -39,17 +39,6 @@ public class ChatUtil {
         }
     }
 
-    public static void sendMessage(Player player, String key, String... replacements) {
-        String msg = getMessage(key, replacements);
-        if (msg.contains("\n")) {
-            for (String line : msg.split("\n")) {
-                player.sendMessage(line);
-            }
-        } else {
-            player.sendMessage(msg);
-        }
-    }
-
     public static String getMessage(String key, String... replacements) {
         if (plugin == null) return key;
         Object raw = plugin.getMsgConfig().get(key);

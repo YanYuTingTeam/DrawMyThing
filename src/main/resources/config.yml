@@ -105,8 +105,12 @@ beforestart:
   time: 15
   broadcast:
     sound: 'ORB_PICKUP,1,1'
-    title: '&6&l游戏将在 %time% 秒后开始,20,40,20'
-  showtime: [10, 5, 4, 3, 2, 1]
+    title: '&a%time%'
+    subtitle: ''
+    fade-in: 5
+    stay: 10
+    fade-out: 5
+  showtime: [5, 4, 3, 2, 1]
 
 game:
   round-time: 75
@@ -118,6 +122,12 @@ game:
   builder-actionbar: '&e&l题目: &r&f%paintname%'
   builder-teleport-delay: 1
   round: 2
+  guessed:
+      title: ''
+      subtitle: '&e(+%getscore%) &a分 你猜出了题目!'
+      fade-in: 10
+      stay: 30
+      fade-out: 10
 
 tip:
   splice: ' '

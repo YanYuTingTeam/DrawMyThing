@@ -37,6 +37,7 @@ public class Game {
     private Map<Player, GameMode> gamemode = new HashMap<Player, GameMode>();
     private Map<Player, Integer> foodLevel = new HashMap<Player, Integer>();
     private List<Player> hasFound = new ArrayList<Player>();
+    private Map<Player, Integer> roundGainedScore = new HashMap<Player, Integer>();
 
     private Player builder;
     private int players = 0;
@@ -127,6 +128,8 @@ public class Game {
         if (player != null) {
             result = result.replace("%player%", player.getName());
             if (score.containsKey(player)) result = result.replace("%score%", String.valueOf(score.get(player)));
+            if (roundGainedScore.containsKey(player)) result = result.replace("%getscore%", String.valueOf(roundGainedScore.get(player)));
+            else result = result.replace("%getscore%", "0");
         }
         if (word != null) {
             result = result.replace("%paintname%", word);
@@ -325,6 +328,7 @@ public class Game {
         wordHasBeenFound = false;
         playerFound = 0;
         hasFound.clear();
+        roundGainedScore.clear();
         acceptWords = true;
         word = getNewWord();
         wordf = new StringBuilder(word.replaceAll("[a-zA-Z]", "_"));
@@ -377,16 +381,21 @@ public class Game {
         }
         hasFound.add(player);
         playSoundForAll(Sound.NOTE_PIANO, 1.0f, 1.0f);
+        int gained = 0;
         if (!wordHasBeenFound) {
             sendMsg("first-found", "%player%", player.getName());
             if (builder != null) ChatUtil.sendMsg(builder, "builder-found-notify");
             increaseScore(player, 3);
+            gained = 3;
             if (builder != null) increaseScore(builder, 2);
             wordHasBeenFound = true;
         } else {
             sendMsg("other-found", "%player%", player.getName());
             increaseScore(player, 1);
+            gained = 1;
         }
+        roundGainedScore.put(player, roundGainedScore.containsKey(player) ? roundGainedScore.get(player) + gained : gained);
+        sendGuessedTitle(player);
         playerFound++;
         if (playerFound >= players - 1) {
             sendMsg("all-found-next");
@@ -394,6 +403,20 @@ public class Game {
             TaskNextRound endRound = new TaskNextRound(this);
             endRound.runTaskLater(instance, 100L); tasks.add(endRound);
         }
+    }
+
+    private void sendGuessedTitle(Player player) {
+        String title = instance.getConfig().getString("game.guessed.title", null);
+        String subtitle = instance.getConfig().getString("game.guessed.subtitle", null);
+        if (title != null) title = replacePlaceholders(title, player);
+        if (subtitle != null) subtitle = replacePlaceholders(subtitle, player);
+        boolean hasTitle = title != null && !title.isEmpty();
+        boolean hasSub = subtitle != null && !subtitle.isEmpty();
+        if (!hasTitle && !hasSub) return;
+        int fadeIn = instance.getConfig().getInt("game.guessed.fade-in", 0);
+        int stay = instance.getConfig().getInt("game.guessed.stay", 20);
+        int fadeOut = instance.getConfig().getInt("game.guessed.fade-out", 10);
+        ChatUtil.sendTitle(player, hasTitle ? title : null, hasSub ? subtitle : null, fadeIn, stay, fadeOut);
     }
 
     private void getNextBuilder() {
@@ -544,26 +567,30 @@ public class Game {
         List<Integer> showtime = instance.getConfig().getIntegerList("beforestart.showtime");
         if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
         final String soundStr = instance.getConfig().getString("beforestart.broadcast.sound", "ORB_PICKUP,1,1");
-        final String titleStr = instance.getConfig().getString("beforestart.broadcast.title", "&6&l游戏将在 %time% 秒后开始,20,40,20");
+        final String titleStr = instance.getConfig().getString("beforestart.broadcast.title", "&6&l游戏将在 %time% 秒后开始");
+        final String subtitleStr = instance.getConfig().getString("beforestart.broadcast.subtitle", null);
+        final int fadeIn = instance.getConfig().getInt("beforestart.broadcast.fade-in", 20);
+        final int stay = instance.getConfig().getInt("beforestart.broadcast.stay", 40);
+        final int fadeOut = instance.getConfig().getInt("beforestart.broadcast.fade-out", 20);
         for (int t : showtime) {
             if (t > totalTime) continue;
             final int timeLeft = t;
             new BukkitRunnable() {
-                public void run() { if (!waiting) { cancel(); return; } broadcastCountdown(timeLeft, soundStr, titleStr); }
+                public void run() { if (!waiting) { cancel(); return; } broadcastCountdown(timeLeft, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut); }
             }.runTaskLater(instance, (totalTime - timeLeft) * 20L);
         }
     }
 
-    private void broadcastCountdown(int timeLeft, String soundStr, String titleStr) {
+    private void broadcastCountdown(int timeLeft, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut) {
         try {
             String[] sp = soundStr.split(",");
             playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
         } catch (Exception ignored) {}
-        try {
-            String[] tp = titleStr.split(",");
-            sendTitleToAll(colorize(tp[0].replace("%time%", String.valueOf(timeLeft))), "",
-                    tp.length > 1 ? Integer.parseInt(tp[1].trim()) : 20, tp.length > 2 ? Integer.parseInt(tp[2].trim()) : 40, tp.length > 3 ? Integer.parseInt(tp[3].trim()) : 20);
-        } catch (Exception ignored) {}
+        String title = titleStr != null ? colorize(titleStr.replace("%time%", String.valueOf(timeLeft))) : null;
+        String subtitle = subtitleStr != null ? colorize(subtitleStr.replace("%time%", String.valueOf(timeLeft))) : null;
+        if ((title != null && !title.isEmpty()) || (subtitle != null && !subtitle.isEmpty())) {
+            sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
+        }
     }
 
     private void clearWeather() {

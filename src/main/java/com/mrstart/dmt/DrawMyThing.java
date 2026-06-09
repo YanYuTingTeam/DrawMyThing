@@ -452,18 +452,18 @@ public class DrawMyThing extends JavaPlugin {
     }
 
     private void sendHelp(Player player) {
-        ChatUtil.sendMessage(player, "help-title");
+        player.sendMessage(ChatUtil.colorize("&e&lDrawMyThing &r&7for &b&lYanYuTing"));
         if (player.hasPermission("dmt.admin")) {
-            ChatUtil.sendMessage(player, "help-admin-create");
-            ChatUtil.sendMessage(player, "help-admin-delete");
-            ChatUtil.sendMessage(player, "help-admin-pos1");
-            ChatUtil.sendMessage(player, "help-admin-pos2");
-            ChatUtil.sendMessage(player, "help-admin-spawn");
-            ChatUtil.sendMessage(player, "help-admin-bspawn");
-            ChatUtil.sendMessage(player, "help-admin-lobby");
-            ChatUtil.sendMessage(player, "help-admin-min");
-            ChatUtil.sendMessage(player, "help-admin-max");
-            ChatUtil.sendMessage(player, "help-admin-reload");
+            player.sendMessage(ChatUtil.colorize("&f/dmt create <gameName> &7- 创建游戏"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt delete <gameName> &7- 删除游戏"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setcanvaspos1 <gameName> &7- 设置画布坐标1"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setcanvaspos2 <gameName> &7- 设置画布坐标2"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setspawn <gameName> &7- 设置观战出生点"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setbuilderspawn <gameName> &7- 设置绘画者出生点"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setlobby <gameName> &7- 设置等待大厅位置"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setmin <gameName> <amount> &7- 设置最少开始人数"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt setmax <gameName> <amount> &7- 设置最大人数"));
+            player.sendMessage(ChatUtil.colorize("&f/dmt reload &7- 重载插件"));
         }
     }
 
