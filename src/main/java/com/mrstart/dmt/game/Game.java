@@ -449,7 +449,7 @@ public class Game {
         int fadeIn = instance.getConfig().getInt("game.guessed.fade-in", 0);
         int stay = instance.getConfig().getInt("game.guessed.stay", 20);
         int fadeOut = instance.getConfig().getInt("game.guessed.fade-out", 10);
-        ChatUtil.sendTitle(player, hasTitle ? title : null, hasSub ? subtitle : null, fadeIn, stay, fadeOut);
+        ChatUtil.sendTitle(player, hasTitle ? title : " ", hasSub ? subtitle : null, fadeIn, stay, fadeOut);
     }
 
     private void sendStartedBroadcast() {
@@ -526,7 +526,6 @@ public class Game {
     public void increaseScore(Player p, int value) {
         if (score.containsKey(p)) {
             score.put(p, score.get(p) + value);
-            if (objective != null) objective.getScore(p).setScore(score.get(p));
         }
     }
 

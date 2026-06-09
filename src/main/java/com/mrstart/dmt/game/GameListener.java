@@ -120,6 +120,11 @@ public class GameListener implements Listener {
             }return;
         }
 
+        if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
+            cancelPaintTask(player);
+            return;
+        }
+
         if (isPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             cancelPaintTask(player);
             Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
@@ -228,12 +233,18 @@ public class GameListener implements Listener {
         cancelPaintTask(event.getPlayer());
     }
 
+    @EventHandler
+    public void onPlayerToggleSneak(PlayerToggleSneakEvent event) {
+        if (event.isSneaking()) cancelPaintTask(event.getPlayer());
+    }
+
     private void startPaintTask(final Player player, final Game game, final boolean big) {
         BukkitTask task = new BukkitRunnable() {
             public void run() {
                 if (!player.isOnline() || !isInGame(player)) { cancelPaintTask(player); return; }
                 ItemStack hand = player.getItemInHand();
                 if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
+                if (hand.getType().name().endsWith("_SWORD") && !player.isBlocking()) { cancelPaintTask(player); return; }
                 Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
                 if (b.getType() != Material.WOOL) return;
                 CuboidZone zone = game.getBuildZone();
