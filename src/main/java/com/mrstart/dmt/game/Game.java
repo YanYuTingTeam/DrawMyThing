@@ -200,6 +200,7 @@ public class Game {
         startWaitingScoreboard();
         if (players >= minplayers && !waiting) {
             waiting = true;
+            startStartingScoreboard();
             sendMsg("game-starting", "%time%", String.valueOf(instance.getConfig().getInt("beforestart.time", 10)));
             int countdownTime = instance.getConfig().getInt("beforestart.time", 10);
             TaskStart startTask = new TaskStart(this);
@@ -212,7 +213,7 @@ public class Game {
 
     public void leave(Player player) {
         if (!score.containsKey(player)) return;
-        if (!started && players == maxplayers) cancelTasks();
+        if (!started && players == maxplayers) { cancelTasks(); waiting = false; }
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
@@ -241,6 +242,7 @@ public class Game {
         if (players > 0) sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         if (started && players <= 1) { cancelTasks(); stop(); }
         if (players <= 0) { waiting = false; stopScoreboardTask(); }
+        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; startWaitingScoreboard(); }
     }
 
     public void start() {
@@ -398,7 +400,19 @@ public class Game {
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("waiting-scoreboard-title", "&6等待中")));
         int refresh = instance.getConfig().getInt("scoreboard.waiting.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
-            public void run() { if (!waiting && !started) { cancel(); return; } updateWaitingScoreboard(); }
+            public void run() { if (waiting || started) { cancel(); return; } updateWaitingScoreboard(); }
+        }.runTaskTimer(instance, 5L, Math.max(refresh, 1));
+    }
+
+    private void startStartingScoreboard() {
+        stopScoreboardTask();
+        objective.unregister();
+        objective = board.registerNewObjective(name + "_points", "dummy");
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        objective.setDisplayName(colorize(instance.getMsgConfig().getString("starting-scoreboard-title", "&6开始中")));
+        int refresh = instance.getConfig().getInt("scoreboard.starting.refresh", 20);
+        scoreboardTask = new BukkitRunnable() {
+            public void run() { if (!waiting || started) { cancel(); return; } updateStartingScoreboard(); }
         }.runTaskTimer(instance, 5L, Math.max(refresh, 1));
     }
 
@@ -421,6 +435,20 @@ public class Game {
         objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中")));
         List<String> content = instance.getConfig().getStringList("scoreboard.waiting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a等待开始", "");
+        int scoreVal = content.size();
+        for (String line : content) {
+            line = line.replace("%count%", String.valueOf(players)).replace("%max%", String.valueOf(maxplayers)).replace("%game%", name);
+            line = colorize(line);
+            String entry = line.length() > 16 ? line.substring(0, 16) : line;
+            objective.getScore(entry).setScore(scoreVal--);
+        }
+    }
+
+    private void updateStartingScoreboard() {
+        for (String entry : board.getEntries()) board.resetScores(entry);
+        objective.setDisplayName(colorize(instance.getConfig().getString("scoreboard.starting.title", "&6开始中")));
+        List<String> content = instance.getConfig().getStringList("scoreboard.starting.content");
+        if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a即将开始", "");
         int scoreVal = content.size();
         for (String line : content) {
             line = line.replace("%count%", String.valueOf(players)).replace("%max%", String.valueOf(maxplayers)).replace("%game%", name);

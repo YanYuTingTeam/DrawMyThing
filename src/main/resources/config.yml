@@ -46,35 +46,35 @@ words:
 
 item:
   leave:
-    material: BED
-    data: 14
+    material: CLOCK
+    data: 0
     slot: 8
     name: '&c返回大厅'
     lore:
       - '&7点击返回大厅'
   pencil:
-    material: STICK
+    material: WOODEN_SWORD
     data: 0
     slot: 0
-    name: '&b铅笔'
+    name: '&a默认画笔(剑准心对准画布，按住右键作画)'
     lore:
       - '&7右键方块进行绘画'
   big-pencil:
-    material: BLAZE_ROD
+    material: IRON_SWORD
     data: 0
     slot: 1
-    name: '&e大号铅笔'
+    name: '&a&l粗画笔(剑准心对准画布，按住右键作画)'
     lore:
       - '&7右键方块进行十字绘画'
   eraser:
-    material: WOOL
+    material: TNT
     data: 14
     slot: 2
     name: '&c橡皮擦'
     lore:
       - '&7右键方块擦除为白色'
   color-picker:
-    material: COMPASS
+    material: BUCKET
     data: 0
     slot: 3
     name: '&a选择颜色'
@@ -102,7 +102,7 @@ color-picker:
     - {wool: 15, name: '&0黑色', slot: 15}
 
 beforestart:
-  time: 10
+  time: 15
   broadcast:
     sound: 'ORB_PICKUP,1,1'
     title: '&6&l游戏将在 %time% 秒后开始,20,40,20'
@@ -124,16 +124,31 @@ tip:
 scoreboard:
   waiting:
     refresh: 20
-    title: '&6等待中'
+    title: '&a&l等待玩家加入'
     content:
       - ''
+      - '&6&l时间剩余'
+      - '&f15秒'
+      - ''
+      - '&6&l玩家'
+      - '&f%count%/%max%'
+      - ''
+      - '&6&l最少玩家'
+      - '&f2'
+      - '&f--------------'
+  starting:
+    refresh: 20
+    title: '&a&l开始中...'
+    content:
+      - ''
+      - '&6&l开始中'
       - '&7玩家: &f%count%/%max%'
       - ''
-      - '&7状态: &a等待开始'
       - ''
+      - '&f--------------'
   gaming:
     refresh: 20
-    title: '&6分数'
+    title: '&a&l你&2&l画&a&l我&2&l猜'
     content:
       - ''
       - '&a%player%: &e%score%'

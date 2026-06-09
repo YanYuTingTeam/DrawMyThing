@@ -18,6 +18,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 
+import org.bukkit.scheduler.BukkitRunnable;
 import java.util.HashSet;
 import java.util.List;
 
@@ -37,6 +38,27 @@ public class GameListener implements Listener {
             Game game = instance.getGameByName(gameName);
             if (game != null) game.leave(player);
         }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        if (!instance.getConfig().getBoolean("autojoin.enabled", false)) return;
+        final Player player = event.getPlayer();
+        new BukkitRunnable() {
+            public void run() {
+                if (!player.isOnline() || player.hasMetadata("inbmt")) return;
+                if (instance.getConfig().getBoolean("autojoin.randomjoin", false)) {
+                    java.util.List<Game> available = new java.util.ArrayList<Game>();
+                    for (Game g : instance.getGames()) { if (!g.isStarted() && g.getPlayerCount() < g.getMaxPlayers()) available.add(g); }
+                    if (!available.isEmpty()) available.get(new java.util.Random().nextInt(available.size())).join(player);
+                } else {
+                    String target = instance.getConfig().getString("autojoin.joingame", "");
+                    if (target.isEmpty()) return;
+                    Game game = instance.getGameByName(target);
+                    if (game != null) game.join(player);
+                }
+            }
+        }.runTaskLater(instance, 5L);
     }
 
     @EventHandler
