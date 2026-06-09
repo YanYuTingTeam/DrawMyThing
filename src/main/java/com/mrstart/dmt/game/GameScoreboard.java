@@ -27,7 +27,6 @@ public class GameScoreboard {
         this.board = manager.getNewScoreboard();
         this.objective = board.registerNewObjective(game.getName() + "_points", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(ChatUtil.colorize(plugin.getConfig().getString("scoreboard.gaming.title", "&6分数")));
     }
 
     public Scoreboard getBoard() { return board; }
@@ -56,56 +55,44 @@ public class GameScoreboard {
         objective.getScore(invisible).setScore(scoreVal);
     }
 
-    public void startWaitingScoreboard() {
+    private void prepareObjective() {
         stopScoreboardTask();
         if (objective != null) objective.unregister();
         objectiveIndex = 0;
         objective = board.registerNewObjective(game.getName() + "_sb", "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(ChatUtil.colorize(plugin.getConfig().getString("scoreboard.waiting.title", "&6等待中")));
+    }
+
+    public void startWaitingScoreboard() {
+        prepareObjective();
         int refresh = plugin.getConfig().getInt("scoreboard.waiting.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (game.isStarted()) { cancel(); return; } updateWaitingScoreboard(); }
-        }.runTaskTimer(plugin, 5L, Math.max(refresh, 1));
+        }.runTaskTimer(plugin, 0L, Math.max(refresh, 1));
     }
 
     public void startStartingScoreboard() {
-        stopScoreboardTask();
-        if (objective != null) objective.unregister();
-        objectiveIndex = 0;
-        objective = board.registerNewObjective(game.getName() + "_sb", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(ChatUtil.colorize(plugin.getConfig().getString("scoreboard.starting.title", "&6开始中")));
+        prepareObjective();
         int refresh = plugin.getConfig().getInt("scoreboard.starting.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (!game.isWaiting() || game.isStarted()) { cancel(); return; } updateStartingScoreboard(); }
-        }.runTaskTimer(plugin, 5L, Math.max(refresh, 1));
+        }.runTaskTimer(plugin, 0L, Math.max(refresh, 1));
     }
 
     public void startGamingScoreboard() {
-        stopScoreboardTask();
-        if (objective != null) objective.unregister();
-        objectiveIndex = 0;
-        objective = board.registerNewObjective(game.getName() + "_sb", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(ChatUtil.colorize(plugin.getConfig().getString("scoreboard.gaming.title", "&6分数")));
+        prepareObjective();
         int refresh = plugin.getConfig().getInt("scoreboard.gaming.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (!game.isStarted()) { cancel(); return; } updateGamingScoreboard(); }
-        }.runTaskTimer(plugin, 5L, Math.max(refresh, 1));
+        }.runTaskTimer(plugin, 0L, Math.max(refresh, 1));
     }
 
     public void startEndingScoreboard() {
-        stopScoreboardTask();
-        if (objective != null) objective.unregister();
-        objectiveIndex = 0;
-        objective = board.registerNewObjective(game.getName() + "_sb", "dummy");
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        objective.setDisplayName(ChatUtil.colorize(plugin.getConfig().getString("scoreboard.ending.title", "&c&l游戏结束")));
+        prepareObjective();
         int refresh = plugin.getConfig().getInt("scoreboard.ending.refresh", 20);
         scoreboardTask = new BukkitRunnable() {
             public void run() { if (game.getEndTime() <= 0) { cancel(); return; } updateEndingScoreboard(); }
-        }.runTaskTimer(plugin, 5L, Math.max(refresh, 1));
+        }.runTaskTimer(plugin, 0L, Math.max(refresh, 1));
     }
 
     public void stopScoreboardTask() {
