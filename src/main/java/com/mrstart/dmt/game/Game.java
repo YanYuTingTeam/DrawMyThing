@@ -283,6 +283,14 @@ public class Game {
         signManager.updateSigns();
 
         if (players > 0) messenger.sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
+        if (started && !aftergameRunning && builder != null && builder.equals(player)) {
+            builder = null;
+            cancelTasks();
+            if (players <= 1) { stop(); return; }
+            getNextBuilder();
+            updateMotd();
+            return;
+        }
         if (started && players <= 1 && !aftergameRunning) { cancelTasks(); stop(); }
         if (players <= 0) {
             waiting = false; countdownStartTime = 0; scoreboard.stopScoreboardTask();
