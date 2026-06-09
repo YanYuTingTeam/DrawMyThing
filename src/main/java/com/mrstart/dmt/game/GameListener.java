@@ -272,7 +272,9 @@ public class GameListener implements Listener {
         if (word != null && event.getMessage().toLowerCase().contains(word.toLowerCase())) {
             game.wordFoundBy(player);
         } else {
-            game.sendMessage(ChatColor.BOLD + player.getName() + ": " + ChatColor.RESET + event.getMessage().toLowerCase());
+            String chatFormat = instance.getConfig().getString("chat.format", "&l%player%: &r%message%");
+            String chatMsg = ChatUtil.colorize(chatFormat.replace("%player%", player.getName()).replace("%message%", event.getMessage().toLowerCase()));
+            game.sendMessage(chatMsg);
         }
     }
 

@@ -7,6 +7,9 @@ no-hunger: true
 # 不受伤害
 no-damage: true
 
+chat:
+  format: '<%player%> &r%message%'
+
 item:
   leave:
     material: WATCH # 他妈的这个CLOCK为什么叫WATCH 看一遍吐槽一边

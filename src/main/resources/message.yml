@@ -70,7 +70,7 @@ show-paintname:
   - '&7&m____________________________________'
 first-found: '&e&l+3 &7&l玩家 &r&c%player% &7&l猜中了.'
 other-found: '&e&l+1 &7&l玩家 &r&c%player% &7&l猜中了.'
-builder-found-notify: '&6&l+2 &a&l有人猜对了你的词！'
+builder-found-notify: ''
 already-found: '&c你已经猜对过了！'
 drawer-no-chat: '&c绘画者不能聊天！'
 time-warning-30: ''

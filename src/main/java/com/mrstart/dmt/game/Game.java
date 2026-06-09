@@ -7,6 +7,7 @@ import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.task.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.Sign;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -368,7 +369,6 @@ public class Game {
         Random r = new Random();
         int idx = r.nextInt(word.length());
         wordf.setCharAt(idx, word.charAt(idx));
-        messenger.playSoundForAll(Sound.ITEM_PICKUP, 1.0f, 1.0f);
     }
 
     public void wordFoundBy(Player player) {
