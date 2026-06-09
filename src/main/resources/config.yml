@@ -53,7 +53,7 @@ item:
     lore:
       - '&7点击返回大厅'
   pencil:
-    material: WOODEN_SWORD
+    material: WOOD_SWORD
     data: 0
     slot: 0
     name: '&a默认画笔(剑准心对准画布，按住右键作画)'
@@ -122,6 +122,13 @@ game:
   builder-actionbar: '&e&l题目: &r&f%paintname%'
   builder-teleport-delay: 1
   round: 2
+  started:
+    title: ''
+    subtitle: ''
+    sound: 'NOTE_PLING,1,1'
+    fade-in: 0
+    stay: 0
+    fade-out: 0
   guessed:
       title: ''
       subtitle: '&e(+%getscore%) &a分 你猜出了题目!'

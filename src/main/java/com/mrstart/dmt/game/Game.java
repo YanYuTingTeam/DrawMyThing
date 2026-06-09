@@ -61,6 +61,8 @@ public class Game {
     private Scoreboard board;
     private Objective objective;
     private BukkitTask scoreboardTask = null;
+    private List<String> currentEntries = new ArrayList<String>();
+    private int objectiveIndex = 0;
 
     public Game(CuboidZone build, Location spawn, Location bspawn, String name, String region, DrawMyThing instance) {
         this.buildzone = build;
@@ -78,6 +80,18 @@ public class Game {
     }
 
     private String colorize(String s) { return ChatUtil.colorize(s); }
+
+    private String makeUniqueEntry(String text) {
+        String base = text.length() > 16 ? text.substring(0, 16) : text;
+        String invisible = "§" + (char) ('0' + (objectiveIndex % 10));
+        objectiveIndex++;
+        return base + invisible;
+    }
+
+    private void setUniqueScore(String entry, int scoreVal) {
+        currentEntries.add(entry);
+        objective.getScore(entry).setScore(scoreVal);
+    }
 
     public String getName() { return name; }
     public String getRegion() { return region; }
@@ -323,7 +337,7 @@ public class Game {
         roundCount = 0;
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
-        playSoundForAll(Sound.NOTE_PIANO, 1.0f, 1.0f);
+        sendStartedBroadcast();
         startRound();
         updateSigns();
         startGamingScoreboard();
@@ -427,6 +441,28 @@ public class Game {
         ChatUtil.sendTitle(player, hasTitle ? title : null, hasSub ? subtitle : null, fadeIn, stay, fadeOut);
     }
 
+    private void sendStartedBroadcast() {
+        String message = instance.getConfig().getString("game.started.message", null);
+        if (message != null && !message.isEmpty()) {
+            sendMessage(colorize(replacePlaceholders(message, null)));
+        }
+        String title = instance.getConfig().getString("game.started.title", null);
+        String subtitle = instance.getConfig().getString("game.started.subtitle", null);
+        String soundStr = instance.getConfig().getString("game.started.sound", "LEVEL_UP,1,1");
+        int fadeIn = instance.getConfig().getInt("game.started.fade-in", 0);
+        int stay = instance.getConfig().getInt("game.started.stay", 40);
+        int fadeOut = instance.getConfig().getInt("game.started.fade-out", 10);
+        boolean hasTitle = title != null && !title.isEmpty();
+        boolean hasSub = subtitle != null && !subtitle.isEmpty();
+        if (hasTitle || hasSub) {
+            sendTitleToAll(hasTitle ? colorize(title) : null, hasSub ? colorize(subtitle) : null, fadeIn, stay, fadeOut);
+        }
+        try {
+            String[] sp = soundStr.split(",");
+            playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+        } catch (Exception ignored) {}
+    }
+
     private void getNextBuilder() {
         if (getBuilder() != null) {
             builder.setGameMode(GameMode.ADVENTURE);
@@ -478,14 +514,15 @@ public class Game {
     public void increaseScore(Player p, int value) {
         if (score.containsKey(p)) {
             score.put(p, score.get(p) + value);
-            objective.getScore(p).setScore(score.get(p));
+            if (objective != null) objective.getScore(p).setScore(score.get(p));
         }
     }
 
     private void startWaitingScoreboard() {
         stopScoreboardTask();
-        objective.unregister();
-        objective = board.registerNewObjective(name + "_points", "dummy");
+        if (objective != null) objective.unregister();
+        objectiveIndex = 0;
+        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("waiting-scoreboard-title", "&6等待中")));
         int refresh = instance.getConfig().getInt("scoreboard.waiting.refresh", 20);
@@ -496,8 +533,9 @@ public class Game {
 
     private void startStartingScoreboard() {
         stopScoreboardTask();
-        objective.unregister();
-        objective = board.registerNewObjective(name + "_points", "dummy");
+        if (objective != null) objective.unregister();
+        objectiveIndex = 0;
+        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("starting-scoreboard-title", "&6开始中")));
         int refresh = instance.getConfig().getInt("scoreboard.starting.refresh", 20);
@@ -508,8 +546,9 @@ public class Game {
 
     private void startGamingScoreboard() {
         stopScoreboardTask();
-        objective.unregister();
-        objective = board.registerNewObjective(name + "_points", "dummy");
+        if (objective != null) objective.unregister();
+        objectiveIndex = 0;
+        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         objective.setDisplayName(colorize(instance.getMsgConfig().getString("gaming-scoreboard-title", "&6分数")));
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
@@ -521,33 +560,42 @@ public class Game {
     private void stopScoreboardTask() { if (scoreboardTask != null) { scoreboardTask.cancel(); scoreboardTask = null; } }
 
     private void updateWaitingScoreboard() {
-        for (String entry : board.getEntries()) board.resetScores(entry);
+        objective.unregister();
+        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        currentEntries.clear();
         objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.waiting.title", "&6等待中"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.waiting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a等待开始", "");
         int scoreVal = content.size();
         for (String line : content) {
             line = colorize(replacePlaceholders(line, null));
-            String entry = line.length() > 16 ? line.substring(0, 16) : line;
-            objective.getScore(entry).setScore(scoreVal--);
+            String entry = makeUniqueEntry(line);
+            setUniqueScore(entry, scoreVal--);
         }
     }
 
     private void updateStartingScoreboard() {
-        for (String entry : board.getEntries()) board.resetScores(entry);
+        objective.unregister();
+        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        currentEntries.clear();
         objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.starting.title", "&6开始中"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.starting.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&7玩家: &f%count%/%max%", "", "&7状态: &a即将开始", "");
         int scoreVal = content.size();
         for (String line : content) {
             line = colorize(replacePlaceholders(line, null));
-            String entry = line.length() > 16 ? line.substring(0, 16) : line;
-            objective.getScore(entry).setScore(scoreVal--);
+            String entry = makeUniqueEntry(line);
+            setUniqueScore(entry, scoreVal--);
         }
     }
 
     private void updateGamingScoreboard() {
-        for (String entry : board.getEntries()) board.resetScores(entry);
+        objective.unregister();
+        objective = board.registerNewObjective(name + "_sb_" + (objectiveIndex++), "dummy");
+        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        currentEntries.clear();
         objective.setDisplayName(colorize(replacePlaceholders(instance.getConfig().getString("scoreboard.gaming.title", "&6分数"), null)));
         List<String> content = instance.getConfig().getStringList("scoreboard.gaming.content");
         if (content == null || content.isEmpty()) content = Arrays.asList("", "&a%player%: &e%score%", "");
@@ -560,13 +608,13 @@ public class Game {
             if (line.contains("%player%") && !line.contains("%builder_player%") && line.contains("%score%")) {
                 for (Map.Entry<Player, Integer> e : sorted) {
                     String pl = colorize(replacePlaceholders(line, e.getKey()));
-                    String key = pl.length() > 16 ? pl.substring(0, 16) : pl;
-                    objective.getScore(key).setScore(scoreVal--);
+                    String entry = makeUniqueEntry(pl);
+                    setUniqueScore(entry, scoreVal--);
                 }
             } else {
                 String f = colorize(replacePlaceholders(line, null));
-                String key = f.length() > 16 ? f.substring(0, 16) : f;
-                objective.getScore(key).setScore(scoreVal--);
+                String entry = makeUniqueEntry(f);
+                setUniqueScore(entry, scoreVal--);
             }
         }
     }
@@ -614,6 +662,8 @@ public class Game {
 
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; cancelTasks(); stopScoreboardTask();
+        if (objective != null) { objective.unregister(); objective = null; }
+        currentEntries.clear();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);

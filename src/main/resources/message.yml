@@ -1,5 +1,22 @@
 prefix: ''
 
+# %player% 当前玩家
+# %builder_player% 本轮绘画者
+# %game% 游戏名
+# %count% 玩家数
+# %max% 最大玩家数
+# %min% 最少开始数
+# %score% 玩家总分数
+# %getscore% 本回合获得分数
+# %word% 当前题目
+# %tip% 当前提示
+# %paintname% 题目名
+# %round_now% 回合数
+# %round_all% 总回合数
+# %starttime% 倒计时
+# %time% 通用时间
+# %value% 通用数值
+
 unknown-command: '&c未知命令'
 player-only: '&c此命令只能由玩家执行'
 no-permission: '&c你没有权限执行此命令'
