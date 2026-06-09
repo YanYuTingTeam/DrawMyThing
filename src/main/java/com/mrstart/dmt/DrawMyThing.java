@@ -51,6 +51,12 @@ public class DrawMyThing extends JavaPlugin {
         loadWords();
         loadGames();
 
+        if (getConfig().getBoolean("autojoin.bungee", false)) {
+            getConfig().set("autojoin.enabled", true);
+            getConfig().set("autojoin.randomjoin", true);
+            getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+        }
+
         cci = Bukkit.createInventory(null, 18,
                 ChatUtil.colorize(getConfig().getString("color-picker.title", "选择画笔颜色")));
         initColorItems();
@@ -482,5 +488,24 @@ public class DrawMyThing extends JavaPlugin {
             }
         };
         weatherTask.runTaskTimer(this, 100L, 200L);
+    }
+
+    public void sendToServer(Player player, String server) {
+        try {
+            com.google.common.io.ByteArrayDataOutput out = com.google.common.io.ByteStreams.newDataOutput();
+            out.writeUTF("Connect");
+            out.writeUTF(server);
+            player.sendPluginMessage(this, "BungeeCord", out.toByteArray());
+        } catch (Exception e) {
+            getLogger().warning("无法将玩家 " + player.getName() + " 传送至子服 " + server + ": " + e.getMessage());
+        }
+    }
+
+    public boolean isBungeeMode() {
+        return getConfig().getBoolean("autojoin.bungee", false);
+    }
+
+    public String getBungeeLobby() {
+        return getConfig().getString("autojoin.lobby", "lobby");
     }
 }

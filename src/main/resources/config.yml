@@ -176,6 +176,9 @@ autojoin:
   enabled: true
   randomjoin: false
   joingame: 'castle'
+  bungee: true # true后, enabled+randomjoin强制为true
+  lobby: 'lobby'
+  full-restart: false # 游戏结束重启服务端
 
 join:
   title: '&a&l你&2&l画&a&l我&2&l猜'

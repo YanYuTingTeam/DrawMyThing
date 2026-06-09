@@ -289,7 +289,10 @@ public class Game {
         board.resetScores(player);
         player.setScoreboard(manager.getMainScoreboard());
         players--;
-        if (player.hasMetadata("oldLoc")) {
+        if (instance.isBungeeMode()) {
+            instance.sendToServer(player, instance.getBungeeLobby());
+            player.removeMetadata("oldLoc", instance);
+        } else if (player.hasMetadata("oldLoc")) {
             Location oldLoc = LocationUtil.StringToLoc(((MetadataValue) player.getMetadata("oldLoc").get(0)).asString());
             if (oldLoc != null) player.teleport(oldLoc);
             player.removeMetadata("oldLoc", instance);
@@ -299,7 +302,12 @@ public class Game {
 
         if (players > 0) sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         if (started && players <= 1) { cancelTasks(); stop(); }
-        if (players <= 0) { waiting = false; countdownStartTime = 0; stopScoreboardTask(); }
+        if (players <= 0) {
+            waiting = false; countdownStartTime = 0; stopScoreboardTask();
+            if (instance.isBungeeMode() && instance.getConfig().getBoolean("autojoin.full-restart", false)) {
+                Bukkit.getServer().shutdown();
+            }
+        }
         else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; startWaitingScoreboard(); }
     }
 
