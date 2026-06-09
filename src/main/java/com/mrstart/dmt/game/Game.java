@@ -14,7 +14,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 
 public class Game {
@@ -243,9 +242,25 @@ public class Game {
     }
 
     public void join(Player player) {
-        if (started) { ChatUtil.sendMsg(player, "game-already-started"); return; }
+        if (started) {
+            if (instance.isBungeeMode()) {
+                String kickMsg = instance.getConfig().getString("kick.start", "&c游戏已开始, 你被迫下线");
+                player.kickPlayer(ChatUtil.colorize(kickMsg));
+            } else {
+                ChatUtil.sendMsg(player, "game-already-started");
+            }
+            return;
+        }
         if (score.containsKey(player)) { ChatUtil.sendMsg(player, "already-in-game"); return; }
-        if (players >= maxplayers) { ChatUtil.sendMsg(player, "game-full"); return; }
+        if (players >= maxplayers) {
+            if (instance.isBungeeMode()) {
+                String kickMsg = instance.getConfig().getString("kick.full", "&c房间已满, 你被迫下线");
+                player.kickPlayer(ChatUtil.colorize(kickMsg));
+            } else {
+                ChatUtil.sendMsg(player, "game-full");
+            }
+            return;
+        }
         player.setMetadata("oldLoc", new org.bukkit.metadata.FixedMetadataValue(instance, LocationUtil.LocationToString(player.getLocation())));
         Location teleportTarget = lobby != null ? lobby : spawn;
         if (teleportTarget != null) player.teleport(teleportTarget);
@@ -279,6 +294,7 @@ public class Game {
         }
 
         scoreboard.startWaitingScoreboard();
+        updateMotd();
         if (players >= minplayers && !waiting) {
             waiting = true;
             countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
@@ -332,6 +348,7 @@ public class Game {
             }
         }
         else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; scoreboard.startWaitingScoreboard(); }
+        updateMotd();
     }
 
     public void start() {
@@ -350,6 +367,7 @@ public class Game {
         startRound();
         updateSigns();
         scoreboard.startGamingScoreboard();
+        updateMotd();
     }
 
     public void startRound() {
@@ -608,6 +626,24 @@ public class Game {
         World world = buildzone != null ? buildzone.getCorner1().getWorld() : Bukkit.getWorld(region);
         if (world != null) { world.setStorm(false); world.setThundering(false); world.setWeatherDuration(999999); }
     }
+    
+    private void updateMotd() {
+        if (!instance.isBungeeMode()) return;
+        String motdWait = instance.getConfig().getString("motd.wait", "");
+        String motdFull = instance.getConfig().getString("motd.full", "");
+        String motdStart = instance.getConfig().getString("motd.start", "");
+        String motd;
+        if (started) motd = motdStart;
+        else if (players >= maxplayers) motd = motdFull;
+        else motd = motdWait;
+        try {
+            Object craftServer = Bukkit.getServer();
+            java.lang.reflect.Method getHandle = craftServer.getClass().getMethod("getHandle");
+            Object dedicatedServer = getHandle.invoke(craftServer);
+            java.lang.reflect.Method setMotd = dedicatedServer.getClass().getMethod("setMotd", String.class);
+            setMotd.invoke(dedicatedServer, motd);
+        } catch (Exception ignored) {}
+    }
 
     public void cancelTasks() { for (BukkitRunnable r : tasks) { try { r.cancel(); } catch (Exception ignored) {} } tasks.clear(); }
 
@@ -622,6 +658,7 @@ public class Game {
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);
+        updateMotd();
     }
 
     public void registerSign(Block block, String display) {

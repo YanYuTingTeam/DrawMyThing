@@ -6,7 +6,6 @@ import com.mrstart.dmt.sign.SignListener;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -184,14 +183,12 @@ public class DrawMyThing extends JavaPlugin {
 
     private void initColorItems() {
         cci.clear();
-        ConfigurationSection colorSection = getConfig().getConfigurationSection("color-picker.colors");
-        if (colorSection != null) {
-            for (String key : colorSection.getKeys(false)) {
-                ConfigurationSection c = colorSection.getConfigurationSection(key);
-                if (c == null) continue;
-                int woolData = c.getInt("wool", 0);
-                String colorName = ChatUtil.colorize(c.getString("name", "&f颜色"));
-                int slot = c.getInt("slot", 0);
+        List<Map<?, ?>> colorList = getConfig().getMapList("color-picker.colors");
+        if (colorList != null && !colorList.isEmpty()) {
+            for (Map<?, ?> c : colorList) {
+                int woolData = c.containsKey("wool") ? ((Number) c.get("wool")).intValue() : 0;
+                String colorName = ChatUtil.colorize(c.containsKey("name") ? c.get("name").toString() : "&f颜色");
+                int slot = c.containsKey("slot") ? ((Number) c.get("slot")).intValue() : 0;
                 ItemStack item = new ItemStack(Material.WOOL, 1, (short) woolData);
                 ItemMeta meta = item.getItemMeta();
                 meta.setDisplayName(colorName);

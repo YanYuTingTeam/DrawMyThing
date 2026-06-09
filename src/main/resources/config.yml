@@ -312,3 +312,12 @@ join:
   fade-in: 0
   stay: 40
   fade-out: 20
+
+motd:
+  wait: 'already'
+  full: 'full'
+  start: 'start'
+
+kick:
+  full: '&c房间已满, 你被迫下线'
+  start: '&c游戏已开始, 你被迫下线'
