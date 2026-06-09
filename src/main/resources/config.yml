@@ -220,6 +220,17 @@ beforestart:
     fade-out: 5
   showtime: [5, 4, 3, 2, 1]
 
+aftergame:
+  time: 10 # 对局结束后, n秒后退出游戏
+  broadcast:
+    sound: 'ORB_PICKUP,1,1'
+    title: '&c%endtime%'
+    subtitle: ''
+    fade-in: 5
+    stay: 10
+    fade-out: 5
+  showtime: []
+
 game:
   round-time: 85
   hints:

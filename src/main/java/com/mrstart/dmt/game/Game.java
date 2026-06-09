@@ -53,6 +53,9 @@ public class Game {
     private int playerFound = 0;
     private long countdownStartTime = 0;
     private int countdownDuration = 0;
+    private boolean aftergameRunning = false;
+    private long aftergameStartTime = 0;
+    private int aftergameDuration = 0;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
     private boolean acceptWords = true;
     private List<Block> signs = new ArrayList<Block>();
@@ -133,6 +136,13 @@ public class Game {
         int remaining = countdownDuration - elapsed;
         return remaining > 0 ? remaining : 0;
     }
+    
+    public int getEndTime() {
+        if (!aftergameRunning) return 0;
+        int elapsed = (int) ((System.currentTimeMillis() - aftergameStartTime) / 1000);
+        int remaining = aftergameDuration - elapsed;
+        return remaining > 0 ? remaining : 0;
+    }
 
     /**
      * 统一占位符替换（不做着色，着色由调用方处理）
@@ -145,6 +155,7 @@ public class Game {
         result = result.replace("%max%", String.valueOf(maxplayers));
         result = result.replace("%min%", String.valueOf(minplayers));
         result = result.replace("%starttime%", String.valueOf(getStartTime()));
+        result = result.replace("%endtime%", String.valueOf(getEndTime()));
         result = result.replace("%round_now%", String.valueOf(roundCount));
         result = result.replace("%round_all%", String.valueOf(buildPerPlayer * score.size()));
         if (builder != null) {
@@ -328,7 +339,7 @@ public class Game {
         updateSigns();
 
         if (players > 0) sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
-        if (started && players <= 1) { cancelTasks(); stop(); }
+        if (started && players <= 1 && !aftergameRunning) { cancelTasks(); stop(); }
         if (players <= 0) {
             waiting = false; countdownStartTime = 0; stopScoreboardTask();
             if (instance.isBungeeMode() && instance.getConfig().getBoolean("autojoin.full-restart", false)) {
@@ -496,7 +507,7 @@ public class Game {
             for (Player p : score.keySet()) sendMsg("score-line", "%player%", p.getName(), "%score%", String.valueOf(score.get(p)));
             sendMsg("winner", "%player%", winner.getName());
         }
-        stop();
+        startAftergame();
     }
 
     private void setBuilder(Player p) {
@@ -647,6 +658,55 @@ public class Game {
             sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
         }
     }
+    
+    private void startAftergame() {
+        aftergameDuration = instance.getConfig().getInt("aftergame.time", 10);
+        if (aftergameDuration <= 0) { stop(); return; }
+        aftergameRunning = true;
+        aftergameStartTime = System.currentTimeMillis();
+        acceptWords = false;
+        startAftergameCountdownBroadcast(aftergameDuration);
+        new BukkitRunnable() {
+            public void run() { stopAftergame(); }
+        }.runTaskLater(instance, aftergameDuration * 20L);
+    }
+
+    private void startAftergameCountdownBroadcast(int totalTime) {
+        List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
+        if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
+        final String soundStr = instance.getConfig().getString("aftergame.broadcast.sound", "ORB_PICKUP,1,1");
+        final String titleStr = instance.getConfig().getString("aftergame.broadcast.title", "&c游戏将在 %endtime% 秒后关闭");
+        final String subtitleStr = instance.getConfig().getString("aftergame.broadcast.subtitle", null);
+        final int fadeIn = instance.getConfig().getInt("aftergame.broadcast.fade-in", 20);
+        final int stay = instance.getConfig().getInt("aftergame.broadcast.stay", 40);
+        final int fadeOut = instance.getConfig().getInt("aftergame.broadcast.fade-out", 20);
+        for (int t : showtime) {
+            if (t > totalTime) continue;
+            final int timeLeft = t;
+            new BukkitRunnable() {
+                public void run() { if (!aftergameRunning) { cancel(); return; } broadcastAftergameCountdown(timeLeft, soundStr, titleStr, subtitleStr, fadeIn, stay, fadeOut); }
+            }.runTaskLater(instance, (totalTime - timeLeft) * 20L);
+        }
+    }
+
+    private void broadcastAftergameCountdown(int timeLeft, String soundStr, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut) {
+        try {
+            String[] sp = soundStr.split(",");
+            playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+        } catch (Exception ignored) {}
+        String title = titleStr != null ? colorize(titleStr.replace("%endtime%", String.valueOf(timeLeft))) : null;
+        String subtitle = subtitleStr != null ? colorize(subtitleStr.replace("%endtime%", String.valueOf(timeLeft))) : null;
+        if ((title != null && !title.isEmpty()) || (subtitle != null && !subtitle.isEmpty())) {
+            sendTitleToAll(title, subtitle, fadeIn, stay, fadeOut);
+        }
+    }
+
+    private void stopAftergame() {
+        if (!aftergameRunning) return;
+        aftergameRunning = false;
+        aftergameStartTime = 0;
+        stop();
+    }
 
     private void clearWeather() {
         World world = buildzone != null ? buildzone.getCorner1().getWorld() : Bukkit.getWorld(region);
@@ -660,7 +720,7 @@ public class Game {
     }
 
     public void stop() {
-        started = false; waiting = false; countdownStartTime = 0; cancelTasks(); stopScoreboardTask();
+        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; cancelTasks(); stopScoreboardTask();
         if (objective != null) { objective.unregister(); objective = null; }
         clearScoreboardTeams();
         builder = null; word = null; wordf = null;
