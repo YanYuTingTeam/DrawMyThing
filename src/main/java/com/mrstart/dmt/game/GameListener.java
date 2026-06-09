@@ -18,6 +18,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 
@@ -37,6 +38,25 @@ public class GameListener implements Listener {
 
     public GameListener(DrawMyThing instance) {
         this.instance = instance;
+    }
+
+    @EventHandler
+    public void onServerPing(ServerListPingEvent event) {
+        if (!instance.isBungeeMode()) return;
+        List<Game> games = instance.getGames();
+        if (games.isEmpty()) return;
+        Game game = games.get(0);
+        String motdWait = instance.getConfig().getString("motd.wait", "");
+        String motdFull = instance.getConfig().getString("motd.full", "");
+        String motdStart = instance.getConfig().getString("motd.start", "");
+        String motdEnd = instance.getConfig().getString("motd.ending", "");
+        String motd;
+        if (game.isStarted() && game.isAftergameRunning()) motd = motdEnd;
+        else if (game.isStarted()) motd = motdStart;
+        else if (game.getPlayerCount() >= game.getMaxPlayers()) motd = motdFull;
+        else motd = motdWait;
+
+        event.setMotd(motd);
     }
 
     @EventHandler

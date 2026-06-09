@@ -7,9 +7,10 @@ import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.task.*;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.Sign;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.metadata.MetadataValue;
@@ -234,7 +235,6 @@ public class Game {
         }
 
         scoreboard.startWaitingScoreboard();
-        updateMotd();
         if (players >= minplayers && !waiting) {
             waiting = true;
             countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
@@ -288,7 +288,6 @@ public class Game {
             cancelTasks();
             if (players <= 1) { stop(); return; }
             getNextBuilder();
-            updateMotd();
             return;
         }
         if (started && players <= 1 && !aftergameRunning) { cancelTasks(); stop(); }
@@ -299,7 +298,6 @@ public class Game {
             }
         }
         else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; for (Player p : score.keySet()) p.setLevel(0); scoreboard.startWaitingScoreboard(); }
-        updateMotd();
     }
 
     public void start() {
@@ -318,7 +316,6 @@ public class Game {
         startRound();
         signManager.updateSigns();
         scoreboard.startGamingScoreboard();
-        updateMotd();
     }
 
     public void startRound() {
@@ -525,27 +522,6 @@ public class Game {
         World world = buildzone != null ? buildzone.getCorner1().getWorld() : Bukkit.getWorld(region);
         if (world != null) { world.setStorm(false); world.setThundering(false); world.setWeatherDuration(999999); }
     }
-    
-    private void updateMotd() {
-        if (!instance.isBungeeMode()) return;
-        String motdWait = instance.getConfig().getString("motd.wait", "");
-        String motdFull = instance.getConfig().getString("motd.full", "");
-        String motdStart = instance.getConfig().getString("motd.start", "");
-        String motdEnd = instance.getConfig().getString("motd.ending", "");
-        String motd;
-        if (started && aftergameRunning) motd = motdEnd;
-        else if (started) motd = motdStart;
-        else if (players >= maxplayers) motd = motdFull;
-        else motd = motdWait;
-        try {
-            Object craftServer = Bukkit.getServer();
-            java.lang.reflect.Method getHandle = craftServer.getClass().getMethod("getHandle");
-            Object dedicatedServer = getHandle.invoke(craftServer);
-            java.lang.reflect.Field motdField = dedicatedServer.getClass().getSuperclass().getDeclaredField("motd");
-            motdField.setAccessible(true);
-            motdField.set(dedicatedServer, motd);
-        } catch (Exception ignored) {}
-    }
 
     public void cancelTasks() { for (BukkitRunnable r : tasks) { try { r.cancel(); } catch (Exception ignored) {} } tasks.clear(); }
 
@@ -560,7 +536,6 @@ public class Game {
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);
-        updateMotd();
     }
 
     public void sendMessage(String message) { messenger.sendMessage(message); }
