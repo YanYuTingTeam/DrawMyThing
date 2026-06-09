@@ -372,6 +372,7 @@ public class Game {
             buildzone.clear();
             buildzone.setWool(DyeColor.WHITE);
         }
+        if (instance.getGameListener() != null) instance.getGameListener().resetColor();
 
         for (Player p : score.keySet()) {
             p.getInventory().clear();

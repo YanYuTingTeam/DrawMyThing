@@ -27,6 +27,7 @@ public class DrawMyThing extends JavaPlugin {
     private List<Game> games = new ArrayList<Game>();
     private List<String> words = new ArrayList<String>();
     public Inventory cci;
+    private GameListener gameListener;
 
     private ItemStack leaveItem;
     private ItemStack pencilItem;
@@ -62,7 +63,8 @@ public class DrawMyThing extends JavaPlugin {
         initColorItems();
 
         PluginManager pm = getServer().getPluginManager();
-        pm.registerEvents(new GameListener(this), this);
+        gameListener = new GameListener(this);
+        pm.registerEvents(gameListener, this);
         pm.registerEvents(new SignListener(this), this);
 
         if (getConfig().getBoolean("force-clear-weather", true)) startWeatherLock();
@@ -129,6 +131,7 @@ public class DrawMyThing extends JavaPlugin {
     }
 
     public List<Game> getGames() { return games; }
+    public GameListener getGameListener() { return gameListener; }
 
     private void initItems() {
         leaveItem = buildItemFromConfig("item.leave", Material.BED, (short) 14, "&c返回大厅", null);
