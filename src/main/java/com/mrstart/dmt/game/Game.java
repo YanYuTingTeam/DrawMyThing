@@ -53,6 +53,7 @@ public class Game {
     private boolean aftergameRunning = false;
     private long aftergameStartTime = 0;
     private int aftergameDuration = 0;
+    private long roundEndTime = 0;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
     private boolean acceptWords = true;
     private List<Block> signs = new ArrayList<Block>();
@@ -109,6 +110,10 @@ public class Game {
         int remaining = aftergameDuration - elapsed;
         return remaining > 0 ? remaining : 0;
     }
+
+    public boolean isAftergameRunning() { return aftergameRunning; }
+    public int getAftergameRemaining() { return getEndTime(); }
+    public long getRoundEndTime() { return roundEndTime; }
 
     /**
      * 统一占位符替换（不做着色，着色由调用方处理）
@@ -324,6 +329,8 @@ public class Game {
             TaskStart startTask = new TaskStart(this);
             startTask.runTaskLater(instance, countdownDuration * 20L);
             tasks.add(startTask);
+            TaskXpCountdown xpTask = new TaskXpCountdown(this);
+            xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
             startCountdownBroadcast(countdownDuration);
         }
         updateSigns();
@@ -340,6 +347,7 @@ public class Game {
 
         if (inventories.get(player) != null) player.getInventory().setContents(inventories.get(player));
         inventories.remove(player);
+        player.setLevel(0);
 
         player.setDisplayName(player.getName());
         player.setGameMode(gamemode.containsKey(player) ? gamemode.get(player) : GameMode.SURVIVAL);
@@ -367,7 +375,7 @@ public class Game {
                 Bukkit.getServer().shutdown();
             }
         }
-        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; scoreboard.startWaitingScoreboard(); }
+        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; for (Player p : score.keySet()) p.setLevel(0); scoreboard.startWaitingScoreboard(); }
         updateMotd();
     }
 
@@ -427,8 +435,11 @@ public class Game {
         List<Integer> hints = instance.getConfig().getIntegerList("game.hints");
         if (hints == null || hints.isEmpty()) hints = Arrays.asList(40, 50, 55);
         for (int h : hints) { TaskAddLetter t = new TaskAddLetter(this); t.runTaskLater(instance, h * 20L); tasks.add(t); }
+        roundEndTime = System.currentTimeMillis() + roundTime * 1000L;
         TaskNextRound endRound = new TaskNextRound(this);
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
+        TaskXpCountdown xpTask = new TaskXpCountdown(this);
+        xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
         TaskAlert endMsg = new TaskAlert(formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
         endMsg.runTaskLater(instance, (roundTime - 5) * 20L); tasks.add(endMsg);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
@@ -474,8 +485,11 @@ public class Game {
         if (playerFound >= players - 1) {
             sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
             cancelTasks();
+            roundEndTime = System.currentTimeMillis() + allFoundDelay * 1000L;
             TaskNextRound endRound = new TaskNextRound(this);
             endRound.runTaskLater(instance, allFoundDelay * 20L); tasks.add(endRound);
+            TaskXpCountdown xpTask = new TaskXpCountdown(this);
+            xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
         }
     }
 
@@ -631,6 +645,7 @@ public class Game {
         aftergameRunning = true;
         aftergameStartTime = System.currentTimeMillis();
         acceptWords = false;
+        roundEndTime = 0;
         scoreboard.startEndingScoreboard();
         List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
         List<String> soundList = instance.getConfig().getStringList("aftergame.broadcast.sound");
@@ -684,7 +699,7 @@ public class Game {
     }
 
     public void stop() {
-        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; cancelTasks(); scoreboard.clearScoreboard();
+        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
         hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear();
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }

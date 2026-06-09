@@ -238,8 +238,8 @@ aftergame:
 
 game:
   round: 3
-  round-time: 85
-  all-found-delay: 5
+  round-time: 90
+  all-found-delay: 3
   hints:
     - 30
     - 60
@@ -249,16 +249,16 @@ game:
   started:
     title: ''
     subtitle: ''
-    sound: 'NOTE_PLING,1,2'
+    sound: 'NOTE_PLING,1,1'
     fade-in: 0
     stay: 0
     fade-out: 0
   guessed:
       title: ''
       subtitle: '&e(+%getscore%) &a分 你猜出了题目!'
-      fade-in: 10
-      stay: 30
-      fade-out: 10
+      fade-in: 15
+      stay: 40
+      fade-out: 15
   broadcast:
     sound:
       - 'ORB_PICKUP,1,1'
@@ -333,8 +333,8 @@ join:
   title: '&a&l你&2&l画&a&l我&2&l猜'
   subtitle: '&7你加入了地图 %game%.'
   fade-in: 0
-  stay: 40
-  fade-out: 20
+  stay: 80
+  fade-out: 30
 
 motd:
   wait: 'already'
