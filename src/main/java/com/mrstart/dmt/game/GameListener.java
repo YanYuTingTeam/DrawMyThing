@@ -508,6 +508,16 @@ public class GameListener implements Listener {
         lastPaintedBlock.remove(player);
     }
 
+    public void stopPlayerPaintTask(Player player) {
+        cancelPaintTask(player);
+    }
+
+    public void stopAllPaintTasks() {
+        for (Player p : new java.util.ArrayList<Player>(paintTasks.keySet())) cancelPaintTask(p);
+        lastPaintedBlock.clear();
+        freezeSoundCooldown.clear();
+    }
+
     private boolean matchItem(ItemStack item, String configPath, Material defaultMat, short defaultData) {
         if (item == null || item.getType() == Material.AIR) return false;
         String matStr = instance.getConfig().getString(configPath + ".material", null);

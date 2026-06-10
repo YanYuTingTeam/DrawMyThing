@@ -302,6 +302,9 @@ public class Game {
             }
             return;
         } else if (started && players <= 1 && !aftergameRunning) {
+            if (instance.getGameListener() != null && builder != null) {
+                try { instance.getGameListener().stopPlayerPaintTask(builder); } catch (Exception ignored) {}
+            }
             cancelTasks();
             timesUp(true);
             int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
