@@ -2,7 +2,6 @@ package com.mrstart.dmt;
 
 import com.mrstart.dmt.game.Game;
 import com.mrstart.dmt.game.GameListener;
-import com.mrstart.dmt.sign.SignListener;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -61,7 +60,6 @@ public class DrawMyThing extends JavaPlugin {
         PluginManager pm = getServer().getPluginManager();
         gameListener = new GameListener(this);
         pm.registerEvents(gameListener, this);
-        pm.registerEvents(new SignListener(this), this);
 
         if (getConfig().getBoolean("force-clear-weather", true)) startWeatherLock();
 

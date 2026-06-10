@@ -6,7 +6,6 @@ import com.mrstart.dmt.LocationUtil;
 import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.task.*;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -64,7 +63,6 @@ public class Game {
 
     private GameScoreboard scoreboard;
     private GameMessenger messenger;
-    private GameSignManager signManager;
 
     public Game(CuboidZone build, Location spawn, Location bspawn, String name, String region, DrawMyThing instance) {
         this.buildzone = build;
@@ -75,7 +73,6 @@ public class Game {
         this.instance = instance;
         this.scoreboard = new GameScoreboard(this, instance);
         this.messenger = new GameMessenger(this, instance);
-        this.signManager = new GameSignManager(this, instance);
     }
 
     public String getName() { return name; }
@@ -108,7 +105,6 @@ public class Game {
 
     public Map<Player, Integer> getScoreMap() { return score; }
     public GameMessenger getMessenger() { return messenger; }
-    public GameSignManager getSignManager() { return signManager; }
 
     public int getStartTime() {
         if (!waiting || started) return 0;
@@ -230,7 +226,6 @@ public class Game {
             xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
             messenger.startCountdownBroadcast(countdownDuration);
         }
-        signManager.updateSigns();
     }
 
     public void leave(Player player) {
@@ -262,7 +257,6 @@ public class Game {
             player.removeMetadata("oldLoc", instance);
         }
         player.removeMetadata("inbmt", instance);
-        signManager.updateSigns();
 
         if (players > 0) messenger.sendMsg("player-left", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         if (started && !aftergameRunning && builder != null && builder.equals(player)) {
@@ -337,7 +331,6 @@ public class Game {
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
         messenger.sendStartedBroadcast();
         startRound();
-        signManager.updateSigns();
         scoreboard.startGamingScoreboard();
     }
 
@@ -587,10 +580,6 @@ public class Game {
 
     public void sendMessage(String message) { messenger.sendMessage(message); }
     public void sendMsg(String key, String... replacements) { messenger.sendMsg(key, replacements); }
-
-    public void registerSign(Block block, String display) { signManager.registerSign(block, display); }
-    public void removeSign(Block block) { signManager.removeSign(block); }
-    public void updateSigns() { signManager.updateSigns(); }
 
     public void save(FileConfiguration file) { GameSerializer.save(this, file); }
     public void remove(FileConfiguration file) { stop(); file.set("games." + getName(), null); }
