@@ -101,7 +101,7 @@ aftergame:
 game:
   round: 3
   round-time: 90
-  all-found-delay: 3
+  all-found-delay: 4
   hints:
     - 30
     - 60
@@ -129,7 +129,7 @@ game:
       - 'ORB_PICKUP,1,1'
       - 'ORB_PICKUP,1,1.5'
       - 'ORB_PICKUP,1,2'
-    showtime: [2, 1, 0]
+    showtime: [3, 2, 1]
   newround:
     sounds:
       - 'ORB_PICKUP,1,2'

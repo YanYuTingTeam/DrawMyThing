@@ -102,6 +102,7 @@ public class Game {
     public void setMaxPlayers(int i) { this.maxplayers = i; }
     public void setRegion(String region) { this.region = region; }
     public void setNotAcceptWords() { this.acceptWords = false; }
+    public boolean isAcceptWords() { return acceptWords; }
     public boolean hasFound(Player player) { return hasFound.contains(player); }
 
     public Map<Player, Integer> getScoreMap() { return score; }
@@ -338,8 +339,6 @@ public class Game {
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
         TaskXpCountdown xpTask = new TaskXpCountdown(this);
         xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
-        TaskAlert endMsg = new TaskAlert(messenger.formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
-        endMsg.runTaskLater(instance, roundTime * 20L); tasks.add(endMsg);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
         abTask.runTaskTimer(instance, 20L, Math.max(refresh, 10)); tasks.add(abTask);
@@ -510,10 +509,6 @@ public class Game {
 
     public void cancelTasks() { for (BukkitRunnable r : tasks) { try { r.cancel(); } catch (Exception ignored) {} } tasks.clear(); }
 
-    public void removePlayerFromAlerts(Player p) {
-        for (BukkitRunnable task : tasks) { if (task instanceof TaskAlert) ((TaskAlert) task).removePlayer(p); }
-    }
-
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
@@ -521,6 +516,23 @@ public class Game {
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);
+    }
+
+    public void timesUp() {
+        acceptWords = false;
+        if (playerFound >= players - 1) return; // MSG all-found-next
+        String timeUpMsg = messenger.formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word);
+        for (Player p : getPlayers()) {
+            if (p.isOnline()) {
+                if (timeUpMsg.contains("\n")) {
+                    String[] lines = timeUpMsg.split("\n");
+                    p.sendMessage(ChatUtil.getPrefix() + lines[0]);
+                    for (int i = 1; i < lines.length; i++) p.sendMessage(lines[i]);
+                } else {
+                    p.sendMessage(ChatUtil.getPrefix() + timeUpMsg);
+                }
+            }
+        }
     }
 
     public void sendMessage(String message) { messenger.sendMessage(message); }

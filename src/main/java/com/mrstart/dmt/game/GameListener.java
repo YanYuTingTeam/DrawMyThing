@@ -313,7 +313,7 @@ public class GameListener implements Listener {
             return;
         }
         String word = game.getWord();
-        if (word != null && event.getMessage().toLowerCase().contains(word.toLowerCase())) {
+        if (word != null && game.isAcceptWords() && event.getMessage().toLowerCase().contains(word.toLowerCase())) {
             game.wordFoundBy(player);
         } else {
             String chatFormat = instance.getConfig().getString("chat.format", "&l%player%: &r%message%");
@@ -565,7 +565,7 @@ public class GameListener implements Listener {
     public void setPencilColor(DyeColor color) { this.pencilColor = color; }
     public DyeColor getColor() { return pencilColor; }
     public void resetColor() { this.pencilColor = DyeColor.BLACK; }
-    
+
     private void playPencilSound(Player player) {
         if (!instance.getConfig().getBoolean("tool-sound", true)) return;
         ItemStack hand = player.getItemInHand();

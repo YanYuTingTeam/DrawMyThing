@@ -8,5 +8,8 @@ public class TaskNextRound extends BukkitRunnable {
     public TaskNextRound(Game game) { this.game = game; }
 
     @Override
-    public void run() { game.startRound(); }
+    public void run() {
+        game.timesUp();
+        game.startRound();
+    }
 }
