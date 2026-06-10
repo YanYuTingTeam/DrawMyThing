@@ -335,7 +335,7 @@ public class Game {
         TaskXpCountdown xpTask = new TaskXpCountdown(this);
         xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
         TaskAlert endMsg = new TaskAlert(messenger.formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word), getPlayers(), this);
-        endMsg.runTaskLater(instance, (roundTime - 5) * 20L); tasks.add(endMsg);
+        endMsg.runTaskLater(instance, roundTime * 20L); tasks.add(endMsg);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
         abTask.runTaskTimer(instance, 20L, Math.max(refresh, 10)); tasks.add(abTask);
