@@ -5,6 +5,7 @@ import com.mrstart.dmt.DrawMyThing;
 import com.mrstart.dmt.LocationUtil;
 import com.mrstart.dmt.cuboid.CuboidZone;
 import com.mrstart.dmt.task.*;
+import com.mrstart.dmt.task.TaskXpCountdown;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -50,6 +51,8 @@ public class Game {
     private int hintCount = 0;
     private long countdownStartTime = 0;
     private int countdownDuration = 0;
+    private int startRemainingSeconds = 0;
+    private long lastStartTickTime = 0;
     private boolean aftergameRunning = false;
     private long aftergameStartTime = 0;
     private int aftergameDuration = 0;
@@ -59,6 +62,7 @@ public class Game {
     private Location builderBoundaryPos1;
     private Location builderBoundaryPos2;
     private List<BukkitRunnable> tasks = new ArrayList<BukkitRunnable>();
+    private TaskXpCountdown xpTask = null;
     private boolean acceptWords = true;
 
     private GameScoreboard scoreboard;
@@ -108,9 +112,18 @@ public class Game {
 
     public int getStartTime() {
         if (!waiting || started) return 0;
-        int elapsed = (int) ((System.currentTimeMillis() - countdownStartTime) / 1000);
-        int remaining = countdownDuration - elapsed;
-        return remaining > 0 ? remaining : 0;
+        return startRemainingSeconds > 0 ? startRemainingSeconds : 0;
+    }
+
+    public synchronized int tickStartCountdown() {
+        if (!waiting || started) return 0;
+        long now = System.currentTimeMillis();
+        long elapsed = (now - lastStartTickTime) / 1000L;
+        if (elapsed <= 0) return startRemainingSeconds;
+        int dec = (int) Math.min(elapsed, Integer.MAX_VALUE);
+        startRemainingSeconds = Math.max(0, startRemainingSeconds - dec);
+        lastStartTickTime += dec * 1000L;
+        return startRemainingSeconds;
     }
 
     public int getEndTime() {
@@ -217,20 +230,21 @@ public class Game {
             waiting = true;
             countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
             countdownStartTime = System.currentTimeMillis();
+            startRemainingSeconds = countdownDuration;
+            lastStartTickTime = System.currentTimeMillis();
             scoreboard.startStartingScoreboard();
             messenger.sendMsg("game-starting", "%time%", String.valueOf(countdownDuration));
             TaskStart startTask = new TaskStart(this);
             startTask.runTaskLater(instance, countdownDuration * 20L);
             tasks.add(startTask);
-            TaskXpCountdown xpTask = new TaskXpCountdown(this);
-            xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+            startXpCountdown();
             messenger.startCountdownBroadcast(countdownDuration, tasks);
         }
     }
 
     public void leave(Player player) {
         if (!score.containsKey(player)) return;
-        if (!started && players == maxplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; }
+        if (!started && players == maxplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; startRemainingSeconds = 0; lastStartTickTime = 0; }
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
@@ -266,6 +280,7 @@ public class Game {
             int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
             if (players <= 1 || roundCount >= round * players) {
                 nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+                roundEndTime = 0;
                 List<Player> sorted = new ArrayList<Player>(score.keySet());
                 java.util.Collections.sort(sorted, new java.util.Comparator<Player>() {
                     public int compare(Player a, Player b) { return score.get(b) - score.get(a); }
@@ -277,14 +292,13 @@ public class Game {
                 new BukkitRunnable() {
                     public void run() { startAftergame(); }
                 }.runTaskLater(instance, nextRoundTime * 20L);
-                TaskXpCountdown xpTask = new TaskXpCountdown(this);
-                xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+                startXpCountdown();
             } else {
                 nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+                roundEndTime = 0;
                 TaskNextRound endRound = new TaskNextRound(this);
                 endRound.runTaskLater(instance, nextRoundTime * 20L); tasks.add(endRound);
-                TaskXpCountdown xpTask = new TaskXpCountdown(this);
-                xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+                startXpCountdown();
             }
             return;
         } else if (started && players <= 1 && !aftergameRunning) {
@@ -292,6 +306,7 @@ public class Game {
             timesUp(true);
             int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
             nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+            roundEndTime = 0;
             List<Player> sorted = new ArrayList<Player>(score.keySet());
             java.util.Collections.sort(sorted, new java.util.Comparator<Player>() {
                 public int compare(Player a, Player b) { return score.get(b) - score.get(a); }
@@ -303,17 +318,16 @@ public class Game {
             new BukkitRunnable() {
                 public void run() { startAftergame(); }
             }.runTaskLater(instance, nextRoundTime * 20L);
-            TaskXpCountdown xpTask = new TaskXpCountdown(this);
-            xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+                startXpCountdown();
             return;
         }
         if (players <= 0) {
-            waiting = false; countdownStartTime = 0; scoreboard.stopScoreboardTask();
+            waiting = false; countdownStartTime = 0; startRemainingSeconds = 0; lastStartTickTime = 0; scoreboard.stopScoreboardTask();
             if (instance.isBungeeMode() && instance.getConfig().getBoolean("autojoin.full-restart", false)) {
                 Bukkit.getServer().shutdown();
             }
         }
-        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; for (Player p : score.keySet()) p.setLevel(0); scoreboard.startWaitingScoreboard(); }
+        else if (waiting && !started && players < minplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; startRemainingSeconds = 0; lastStartTickTime = 0; for (Player p : score.keySet()) p.setLevel(0); scoreboard.startWaitingScoreboard(); }
     }
 
     public void start() {
@@ -321,6 +335,8 @@ public class Game {
         cancelTasks();
         started = true;
         waiting = false;
+        startRemainingSeconds = 0;
+        lastStartTickTime = 0;
         countdownStartTime = 0;
         word = null;
         round = instance.getConfig().getInt("game.round", 2);
@@ -376,8 +392,7 @@ public class Game {
         roundEndTime = System.currentTimeMillis() + roundTime * 1000L;
         TaskNextRound endRound = new TaskNextRound(this);
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
-        TaskXpCountdown xpTask = new TaskXpCountdown(this);
-        xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+        startXpCountdown();
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
         abTask.runTaskTimer(instance, 20L, Math.max(refresh, 10)); tasks.add(abTask);
@@ -437,10 +452,10 @@ public class Game {
             messenger.sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
             cancelTasks();
             nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+            roundEndTime = 0;
             TaskNextRound endRound = new TaskNextRound(this);
             endRound.runTaskLater(instance, nextRoundTime * 20L); tasks.add(endRound);
-            TaskXpCountdown xpTask = new TaskXpCountdown(this);
-            xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+            startXpCountdown();
         }
     }
 
@@ -550,7 +565,21 @@ public class Game {
     }
 
     public void addTask(BukkitRunnable task) { tasks.add(task); }
-    public void cancelTasks() { for (BukkitRunnable r : tasks) { try { r.cancel(); } catch (Exception ignored) {} } tasks.clear(); }
+    public void cancelTasks() { for (BukkitRunnable r : tasks) { try { r.cancel(); } catch (Exception ignored) {} } tasks.clear(); if (xpTask != null) { try { xpTask.cancel(); } catch (Exception ignored) {} xpTask = null; } }
+
+    public void startXpCountdown() {
+        if (xpTask != null) return;
+        TaskXpCountdown t = new TaskXpCountdown(this);
+        t.runTaskTimer(instance, 0L, 20L);
+        tasks.add(t);
+        xpTask = t;
+    }
+
+    public void clearXpTask(com.mrstart.dmt.task.TaskXpCountdown t) {
+        if (xpTask == t) xpTask = null;
+    }
+
+    public com.mrstart.dmt.task.TaskXpCountdown getXpTask() { return xpTask; }
 
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; nextRoundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();

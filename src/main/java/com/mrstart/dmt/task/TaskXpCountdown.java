@@ -1,41 +1,73 @@
 package com.mrstart.dmt.task;
 
 import com.mrstart.dmt.game.Game;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class TaskXpCountdown extends BukkitRunnable {
     private final Game game;
+    private Integer lastSet = null;
+    private Integer lastRemaining = null;
     public TaskXpCountdown(Game game) {
         this.game = game;
     }
 
     @Override
     public void run() {
+        try {
+            if (game.getXpTask() != this) {
+                try { cancel(); } catch (Exception ignored) {}
+                game.clearXpTask(this);
+                return;
+            }
+        } catch (Exception ignored) {}
         long now = System.currentTimeMillis();
         int remaining;
-        boolean isWaiting = false;
+        boolean usedAfter = false, usedNext = false, usedRound = false, usedStart = false;
         if (game.isAftergameRunning()) {
             remaining = game.getAftergameRemaining();
+            usedAfter = true;
         } else if (game.getNextRoundEndTime() > 0) {
             remaining = (int) ((game.getNextRoundEndTime() - now) / 1000);
-            isWaiting = true;
+            usedNext = true;
         } else if (game.getRoundEndTime() > 0) {
             remaining = (int) ((game.getRoundEndTime() - now) / 1000);
+            usedRound = true;
         } else if (game.isWaiting() && !game.isStarted()) {
-            remaining = game.getStartTime();
-            isWaiting = true;
+            remaining = game.tickStartCountdown();
+            usedStart = true;
         } else {
+            Bukkit.getLogger().info("[DMT] TaskXpCountdown cancelled for game=" + game.getName() + " id=" + System.identityHashCode(this));
             cancel();
             setLevel(0);
-            return;}
+            return;
+        }
         if (remaining <= 0) {
-            setLevel(0);
-            return;}
-        if (isWaiting) {
-            setLevel(remaining - 1);
+            if (lastSet == null || lastSet != 0) {
+                setLevel(0);
+                Bukkit.getLogger().info("[DMT] TaskXpCountdown zero remaining for game=" + game.getName() + " id=" + System.identityHashCode(this) + " branchAfter=" + usedAfter + " branchNext=" + usedNext + " branchRound=" + usedRound + " branchStart=" + usedStart + " roundEnd=" + game.getRoundEndTime() + " nextEnd=" + game.getNextRoundEndTime());
+                lastSet = 0;
+            }
+            try { cancel(); } catch (Exception ignored) {}
+            game.clearXpTask(this);
+            return;
+        }
+        int setVal;
+        if (usedNext) {
+            setVal = remaining;
+        } else if (usedStart) {
+            setVal = Math.max(0, remaining - 1);
         } else {
-            setLevel(remaining);
+            setVal = remaining;
+        }
+        if (lastSet == null || lastSet.intValue() != setVal || lastRemaining == null || lastRemaining.intValue() != remaining) {
+            setLevel(setVal);
+            Bukkit.getLogger().info(String.format("[DMT] XPTask game=%s id=%d branch=%s roundEnd=%d nextEnd=%d after=%b waiting=%b remaining=%d set=%d",
+                    game.getName(), System.identityHashCode(this), usedAfter?"after":usedNext?"next":usedRound?"round":"start",
+                    game.getRoundEndTime(), game.getNextRoundEndTime(), game.isAftergameRunning(), game.isWaiting(), remaining, setVal));
+            lastSet = setVal;
+            lastRemaining = remaining;
         }
     }
 
