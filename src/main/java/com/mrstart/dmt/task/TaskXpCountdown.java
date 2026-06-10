@@ -14,12 +14,17 @@ public class TaskXpCountdown extends BukkitRunnable {
     public void run() {
         long now = System.currentTimeMillis();
         int remaining;
+        boolean isWaiting = false;
         if (game.isAftergameRunning()) {
             remaining = game.getAftergameRemaining();
+        } else if (game.getNextRoundEndTime() > 0) {
+            remaining = (int) ((game.getNextRoundEndTime() - now) / 1000);
+            isWaiting = true;
         } else if (game.getRoundEndTime() > 0) {
             remaining = (int) ((game.getRoundEndTime() - now) / 1000);
         } else if (game.isWaiting() && !game.isStarted()) {
             remaining = game.getStartTime();
+            isWaiting = true;
         } else {
             cancel();
             setLevel(0);
@@ -27,7 +32,11 @@ public class TaskXpCountdown extends BukkitRunnable {
         if (remaining <= 0) {
             setLevel(0);
             return;}
-        setLevel(remaining-1);
+        if (isWaiting) {
+            setLevel(remaining - 1);
+        } else {
+            setLevel(remaining);
+        }
     }
 
     private void setLevel(int level) {

@@ -123,16 +123,19 @@ public class GameListener implements Listener {
         Game game = getGame(player);
         if (game == null || !game.isStarted()) return;
         if (game.getBuilder() == null || !game.getBuilder().equals(player)) return;
-        if (event.getFrom().getBlockX() == event.getTo().getBlockX()
-                && event.getFrom().getBlockY() == event.getTo().getBlockY()
-                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) return;
+
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (to == null) return;
+        if (from.getX() == to.getX() && from.getY() == to.getY() && from.getZ() == to.getZ()) return;
 
         long freezeEnd = game.getBuilderFreezeEndTime();
         boolean frozen = freezeEnd > 0 && System.currentTimeMillis() < freezeEnd;
-        boolean outOfBounds = !game.isInBuilderBoundary(event.getTo());
+        boolean outOfBounds = !game.isInBuilderBoundary(to);
 
-        if (frozen || outOfBounds) {
-            event.setTo(event.getFrom());
+        if (frozen) {
+            Location bspawn = game.getBuilderSpawn();
+            if (bspawn != null) player.teleport(bspawn);
             long now = System.currentTimeMillis();
             Long last = freezeSoundCooldown.get(player);
             if (last == null || now - last >= 500) {
@@ -146,10 +149,9 @@ public class GameListener implements Listener {
                     player.playSound(player.getLocation(), sound, volume, pitch);
                 } catch (Exception ignored) {}
             }
-            if (outOfBounds && !frozen) {
-                Location bspawn = game.getBuilderSpawn();
-                if (bspawn != null) player.teleport(bspawn);
-            }
+        } else if (outOfBounds) {
+            Location bspawn = game.getBuilderSpawn();
+            if (bspawn != null) player.teleport(bspawn);
         }
     }
 

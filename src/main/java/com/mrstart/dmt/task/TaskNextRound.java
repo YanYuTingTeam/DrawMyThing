@@ -10,6 +10,15 @@ public class TaskNextRound extends BukkitRunnable {
     @Override
     public void run() {
         game.timesUp();
-        game.startRound();
+        int nextRoundTime = game.getInstance().getConfig().getInt("game.nextroundTime", 5);
+        game.setNextRoundEndTime(System.currentTimeMillis() + nextRoundTime * 1000L);
+        BukkitRunnable delayedStart = new BukkitRunnable() {
+            public void run() { game.startRound(); }
+        };
+        delayedStart.runTaskLater(game.getInstance(), nextRoundTime * 20L);
+        game.addTask(delayedStart);
+        TaskXpCountdown xpTask = new TaskXpCountdown(game);
+        xpTask.runTaskTimer(game.getInstance(), 20L, 20L);
+        game.addTask(xpTask);
     }
 }

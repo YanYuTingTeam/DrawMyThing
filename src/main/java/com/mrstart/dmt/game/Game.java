@@ -55,6 +55,7 @@ public class Game {
     private long aftergameStartTime = 0;
     private int aftergameDuration = 0;
     private long roundEndTime = 0;
+    private long nextRoundEndTime = 0;
     private long builderFreezeEndTime = 0;
     private Location builderBoundaryPos1;
     private Location builderBoundaryPos2;
@@ -126,7 +127,11 @@ public class Game {
     public boolean isAftergameRunning() { return aftergameRunning; }
     public int getAftergameRemaining() { return getEndTime(); }
     public long getRoundEndTime() { return roundEndTime; }
+    public void setRoundEndTime(long time) { this.roundEndTime = time; }
+    public long getNextRoundEndTime() { return nextRoundEndTime; }
+    public void setNextRoundEndTime(long time) { this.nextRoundEndTime = time; }
     public long getBuilderFreezeEndTime() { return builderFreezeEndTime; }
+    public DrawMyThing getInstance() { return instance; }
 
     public Location getBuilderBoundaryPos1() { return builderBoundaryPos1; }
     public Location getBuilderBoundaryPos2() { return builderBoundaryPos2; }
@@ -263,11 +268,51 @@ public class Game {
         if (started && !aftergameRunning && builder != null && builder.equals(player)) {
             builder = null;
             cancelTasks();
-            if (players <= 1) { stop(); return; }
-            getNextBuilder();
+            timesUp(true);
+            int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
+            if (players <= 1 || roundCount >= round * players) {
+                nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+                List<Player> sorted = new ArrayList<Player>(score.keySet());
+                java.util.Collections.sort(sorted, new java.util.Comparator<Player>() {
+                    public int compare(Player a, Player b) { return score.get(b) - score.get(a); }
+                });
+                String t1 = sorted.size() > 0 ? sorted.get(0).getName() : "-";
+                String t2 = sorted.size() > 1 ? sorted.get(1).getName() : "-";
+                String t3 = sorted.size() > 2 ? sorted.get(2).getName() : "-";
+                messenger.sendMsg("end-top", "%t1player%", t1, "%t2player%", t2, "%t3player%", t3);
+                new BukkitRunnable() {
+                    public void run() { startAftergame(); }
+                }.runTaskLater(instance, nextRoundTime * 20L);
+                TaskXpCountdown xpTask = new TaskXpCountdown(this);
+                xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+            } else {
+                nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+                TaskNextRound endRound = new TaskNextRound(this);
+                endRound.runTaskLater(instance, nextRoundTime * 20L); tasks.add(endRound);
+                TaskXpCountdown xpTask = new TaskXpCountdown(this);
+                xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+            }
+            return;
+        } else if (started && players <= 1 && !aftergameRunning) {
+            cancelTasks();
+            timesUp(true);
+            int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
+            nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
+            List<Player> sorted = new ArrayList<Player>(score.keySet());
+            java.util.Collections.sort(sorted, new java.util.Comparator<Player>() {
+                public int compare(Player a, Player b) { return score.get(b) - score.get(a); }
+            });
+            String t1 = sorted.size() > 0 ? sorted.get(0).getName() : "-";
+            String t2 = sorted.size() > 1 ? sorted.get(1).getName() : "-";
+            String t3 = sorted.size() > 2 ? sorted.get(2).getName() : "-";
+            messenger.sendMsg("end-top", "%t1player%", t1, "%t2player%", t2, "%t3player%", t3);
+            new BukkitRunnable() {
+                public void run() { startAftergame(); }
+            }.runTaskLater(instance, nextRoundTime * 20L);
+            TaskXpCountdown xpTask = new TaskXpCountdown(this);
+            xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
             return;
         }
-        if (started && players <= 1 && !aftergameRunning) { cancelTasks(); stop(); }
         if (players <= 0) {
             waiting = false; countdownStartTime = 0; scoreboard.stopScoreboardTask();
             if (instance.isBungeeMode() && instance.getConfig().getBoolean("autojoin.full-restart", false)) {
@@ -298,6 +343,7 @@ public class Game {
 
     public void startRound() {
         cancelTasks();
+        nextRoundEndTime = 0;
         wordHasBeenFound = false;
         playerFound = 0;
         hintCount = 0;
@@ -393,13 +439,13 @@ public class Game {
         roundGainedScore.put(player, roundGainedScore.containsKey(player) ? roundGainedScore.get(player) + gained : gained);
         messenger.sendGuessedTitle(player);
         playerFound++;
-        int allFoundDelay = instance.getConfig().getInt("game.all-found-delay", 5);
+        int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
         if (playerFound >= players - 1) {
             messenger.sendMsg("all-found-next", "%round_now%", String.valueOf(roundCount), "%paintname%", word);
             cancelTasks();
-            roundEndTime = System.currentTimeMillis() + allFoundDelay * 1000L;
+            nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
             TaskNextRound endRound = new TaskNextRound(this);
-            endRound.runTaskLater(instance, allFoundDelay * 20L); tasks.add(endRound);
+            endRound.runTaskLater(instance, nextRoundTime * 20L); tasks.add(endRound);
             TaskXpCountdown xpTask = new TaskXpCountdown(this);
             xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
         }
@@ -481,6 +527,7 @@ public class Game {
         aftergameStartTime = System.currentTimeMillis();
         acceptWords = false;
         roundEndTime = 0;
+        nextRoundEndTime = 0;
         scoreboard.startEndingScoreboard();
         List<Integer> showtime = instance.getConfig().getIntegerList("aftergame.showtime");
         List<String> soundList = instance.getConfig().getStringList("aftergame.broadcast.sound");
@@ -507,10 +554,11 @@ public class Game {
         if (world != null) { world.setStorm(false); world.setThundering(false); world.setWeatherDuration(999999); }
     }
 
+    public void addTask(BukkitRunnable task) { tasks.add(task); }
     public void cancelTasks() { for (BukkitRunnable r : tasks) { try { r.cancel(); } catch (Exception ignored) {} } tasks.clear(); }
 
     public void stop() {
-        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
+        started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; nextRoundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
         hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear(); usedWords.clear(); hintCount = 0;
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
@@ -518,9 +566,11 @@ public class Game {
         for (Player p : toKick) leave(p);
     }
 
-    public void timesUp() {
+    public void timesUp() { timesUp(false); }
+
+    public void timesUp(boolean force) {
         acceptWords = false;
-        if (playerFound >= players - 1) return; // MSG all-found-next
+        if (!force && playerFound >= players - 1) return; // MSG all-found-next
         String timeUpMsg = messenger.formatMsg("time-up", null, "%round_now%", String.valueOf(roundCount), "%paintname%", word);
         for (Player p : getPlayers()) {
             if (p.isOnline()) {
