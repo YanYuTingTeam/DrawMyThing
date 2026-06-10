@@ -191,7 +191,7 @@ public class Game {
 
         player.setFoodLevel(20);
         gamemode.put(player, player.getGameMode());
-        player.setGameMode(GameMode.ADVENTURE);
+        player.setGameMode(GameMode.SURVIVAL);
         player.getInventory().clear();
         giveWaitingItems(player);
 
@@ -446,7 +446,8 @@ public class Game {
 
     private void getNextBuilder() {
         if (getBuilder() != null) {
-            builder.setGameMode(GameMode.ADVENTURE);
+            builder.setGameMode(GameMode.SURVIVAL);
+            builder.setAllowFlight(false);
             builder.setFlying(false);
             if (spawn != null) builder.teleport(spawn);
             builder.setDisplayName(builder.getName());
@@ -485,7 +486,8 @@ public class Game {
         new BukkitRunnable() {
             public void run() {
                 if (bspawn != null) fp.teleport(bspawn);
-                fp.setGameMode(GameMode.CREATIVE);
+                fp.setGameMode(GameMode.SURVIVAL);
+                fp.setAllowFlight(true);
                 fp.setFlying(true);
                 fp.getInventory().clear();
                 giveBuilderItems(fp);

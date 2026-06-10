@@ -12,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -181,6 +182,18 @@ public class GameListener implements Listener {
     }
 
     @EventHandler
+    public void onPistonPush(BlockPistonExtendEvent event) {
+        for (Game game : instance.getGames()) {
+            if (!game.isStarted()) continue;
+            CuboidZone zone = game.getBuildZone();
+            if (zone == null) continue;
+            for (Block block : event.getBlocks()) {
+                if (zone.contains(block)) { event.setCancelled(true); return; }
+            }
+        }
+    }
+
+    @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player) event.getEntity();
@@ -220,7 +233,11 @@ public class GameListener implements Listener {
             if (isLeaveItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
                 game.leave(player);
                 return;
-            }return;
+            }
+            if (action == Action.RIGHT_CLICK_BLOCK || action == Action.LEFT_CLICK_BLOCK) {
+                event.setCancelled(true);
+            }
+            return;
         }
 
         if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
