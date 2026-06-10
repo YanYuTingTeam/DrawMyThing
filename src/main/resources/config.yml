@@ -155,7 +155,7 @@ scoreboard:
       - '&f2'
       - '&f--------------'
   starting:
-    refresh: 20
+    refresh: 0
     title: '&a&l开始中...'
     content:
       - '&f'

@@ -328,7 +328,7 @@ public class Game {
         List<Integer> gameBroadcastShowtime = instance.getConfig().getIntegerList("game.broadcast.showtime");
         if (gameBroadcastShowtime != null && !gameBroadcastShowtime.isEmpty()) {
             List<String> gameSoundList = instance.getConfig().getStringList("game.broadcast.sound");
-            messenger.runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false);
+            messenger.runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false, true);
         }
 
         List<Integer> hints = instance.getConfig().getIntegerList("game.hints");

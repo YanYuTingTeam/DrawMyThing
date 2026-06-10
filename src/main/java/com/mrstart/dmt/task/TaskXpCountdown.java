@@ -27,7 +27,7 @@ public class TaskXpCountdown extends BukkitRunnable {
         if (remaining <= 0) {
             setLevel(0);
             return;}
-        setLevel(remaining);
+        setLevel(remaining-1);
     }
 
     private void setLevel(int level) {
