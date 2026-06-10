@@ -9,8 +9,6 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.metadata.MetadataValue;
@@ -36,6 +34,7 @@ public class Game {
     private Map<Player, Integer> foodLevel = new HashMap<Player, Integer>();
     private List<Player> hasFound = new ArrayList<Player>();
     private Map<Player, Integer> roundGainedScore = new HashMap<Player, Integer>();
+    private List<String> usedWords = new ArrayList<String>();
 
     private Player builder;
     private int players = 0;
@@ -287,6 +286,7 @@ public class Game {
         round = instance.getConfig().getInt("game.round", 2);
         if (players < 3) round = Math.max(round, 3);
         roundCount = 0;
+        usedWords.clear();
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
         messenger.sendStartedBroadcast();
@@ -346,7 +346,15 @@ public class Game {
         if (instance.getConfig().getBoolean("force-clear-weather", true)) clearWeather();
     }
 
-    private String getNewWord() { return instance.getRandomWord(); }
+    private String getNewWord() {
+        List<String> words = instance.getWords();
+        List<String> available = new ArrayList<String>();
+        for (String w : words) { if (!usedWords.contains(w)) available.add(w); }
+        if (available.isEmpty()) { usedWords.clear(); available.addAll(words); }
+        String chosen = available.get(new Random().nextInt(available.size()));
+        usedWords.add(chosen);
+        return chosen;
+    }
 
     public void addRandomLetter() {
         if (word == null || wordf == null) return;
@@ -509,7 +517,7 @@ public class Game {
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
-        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear(); hintCount = 0;
+        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear(); usedWords.clear(); hintCount = 0;
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);

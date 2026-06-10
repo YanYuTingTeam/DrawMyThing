@@ -126,6 +126,7 @@ public class DrawMyThing extends JavaPlugin {
         saveGamesFile();
     }
 
+    public List<String> getWords() { return words; }
     public String getRandomWord() {
         if (words.isEmpty()) return "unknown";
         return words.get(new Random().nextInt(words.size()));
