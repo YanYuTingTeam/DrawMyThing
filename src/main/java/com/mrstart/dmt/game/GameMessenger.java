@@ -165,11 +165,11 @@ public class GameMessenger {
         }
     }
 
-    public void runCountdownBroadcast(int totalTime, List<Integer> showtime, List<String> soundList, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning) {
-        runCountdownBroadcast(totalTime, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, timePlaceholder, checkRunning, false);
+    public void runCountdownBroadcast(int totalTime, List<Integer> showtime, List<String> soundList, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning, List<BukkitRunnable> taskList) {
+        runCountdownBroadcast(totalTime, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, timePlaceholder, checkRunning, false, taskList);
     }
 
-    public void runCountdownBroadcast(int totalTime, List<Integer> showtime, List<String> soundList, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning, boolean duringGame) {
+    public void runCountdownBroadcast(int totalTime, List<Integer> showtime, List<String> soundList, String titleStr, String subtitleStr, int fadeIn, int stay, int fadeOut, String timePlaceholder, boolean checkRunning, boolean duringGame, List<BukkitRunnable> taskList) {
         if (showtime == null || showtime.isEmpty()) return;
         for (int idx = 0; idx < showtime.size(); idx++) {
             final int t = showtime.get(idx);
@@ -178,7 +178,7 @@ public class GameMessenger {
             final String ft = titleStr;
             final String fst = subtitleStr;
             final int timeLeft = t;
-            new BukkitRunnable() {
+            BukkitRunnable task = new BukkitRunnable() {
                 public void run() {
                     if (duringGame) {
                         if (!game.isStarted() && !game.isAftergameRunning()) { cancel(); return; }
@@ -187,7 +187,9 @@ public class GameMessenger {
                     }
                     broadcastCountdown(timeLeft, fs, ft, fst, fadeIn, stay, fadeOut, timePlaceholder);
                 }
-            }.runTaskLater(instance, (totalTime - t) * 20L);
+            };
+            task.runTaskLater(instance, (totalTime - t) * 20L);
+            if (taskList != null) taskList.add(task);
         }
     }
 
@@ -205,7 +207,7 @@ public class GameMessenger {
         }
     }
 
-    public void startCountdownBroadcast(int totalTime) {
+    public void startCountdownBroadcast(int totalTime, List<BukkitRunnable> taskList) {
         List<Integer> showtime = instance.getConfig().getIntegerList("beforestart.showtime");
         if (showtime == null || showtime.isEmpty()) showtime = Arrays.asList(10, 5, 4, 3, 2, 1);
         List<String> soundList = instance.getConfig().getStringList("beforestart.broadcast.sound");
@@ -214,6 +216,6 @@ public class GameMessenger {
         int fadeIn = instance.getConfig().getInt("beforestart.broadcast.fade-in", 20);
         int stay = instance.getConfig().getInt("beforestart.broadcast.stay", 40);
         int fadeOut = instance.getConfig().getInt("beforestart.broadcast.fade-out", 20);
-        runCountdownBroadcast(totalTime, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%time%", false);
+        runCountdownBroadcast(totalTime, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%time%", false, taskList);
     }
 }

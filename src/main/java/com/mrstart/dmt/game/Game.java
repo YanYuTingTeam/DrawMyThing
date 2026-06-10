@@ -223,8 +223,8 @@ public class Game {
             startTask.runTaskLater(instance, countdownDuration * 20L);
             tasks.add(startTask);
             TaskXpCountdown xpTask = new TaskXpCountdown(this);
-            xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
-            messenger.startCountdownBroadcast(countdownDuration);
+            xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
+            messenger.startCountdownBroadcast(countdownDuration, tasks);
         }
     }
 
@@ -278,13 +278,13 @@ public class Game {
                     public void run() { startAftergame(); }
                 }.runTaskLater(instance, nextRoundTime * 20L);
                 TaskXpCountdown xpTask = new TaskXpCountdown(this);
-                xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+                xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
             } else {
                 nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
                 TaskNextRound endRound = new TaskNextRound(this);
                 endRound.runTaskLater(instance, nextRoundTime * 20L); tasks.add(endRound);
                 TaskXpCountdown xpTask = new TaskXpCountdown(this);
-                xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+                xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
             }
             return;
         } else if (started && players <= 1 && !aftergameRunning) {
@@ -304,7 +304,7 @@ public class Game {
                 public void run() { startAftergame(); }
             }.runTaskLater(instance, nextRoundTime * 20L);
             TaskXpCountdown xpTask = new TaskXpCountdown(this);
-            xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+            xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
             return;
         }
         if (players <= 0) {
@@ -367,7 +367,7 @@ public class Game {
         List<Integer> gameBroadcastShowtime = instance.getConfig().getIntegerList("game.broadcast.showtime");
         if (gameBroadcastShowtime != null && !gameBroadcastShowtime.isEmpty()) {
             List<String> gameSoundList = instance.getConfig().getStringList("game.broadcast.sound");
-            messenger.runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false, true);
+            messenger.runCountdownBroadcast(roundTime, gameBroadcastShowtime, gameSoundList, null, null, 0, 0, 0, "%time%", false, true, tasks);
         }
 
         List<Integer> hints = instance.getConfig().getIntegerList("game.hints");
@@ -377,7 +377,7 @@ public class Game {
         TaskNextRound endRound = new TaskNextRound(this);
         endRound.runTaskLater(instance, roundTime * 20L); tasks.add(endRound);
         TaskXpCountdown xpTask = new TaskXpCountdown(this);
-        xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+        xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
         int refresh = instance.getConfig().getInt("scoreboard.gaming.refresh", 20);
         TaskActionBar abTask = new TaskActionBar(this, instance);
         abTask.runTaskTimer(instance, 20L, Math.max(refresh, 10)); tasks.add(abTask);
@@ -440,7 +440,7 @@ public class Game {
             TaskNextRound endRound = new TaskNextRound(this);
             endRound.runTaskLater(instance, nextRoundTime * 20L); tasks.add(endRound);
             TaskXpCountdown xpTask = new TaskXpCountdown(this);
-            xpTask.runTaskTimer(instance, 20L, 20L); tasks.add(xpTask);
+            xpTask.runTaskTimer(instance, 0L, 20L); tasks.add(xpTask);
         }
     }
 
@@ -529,7 +529,7 @@ public class Game {
         int fadeIn = instance.getConfig().getInt("aftergame.broadcast.fade-in", 5);
         int stay = instance.getConfig().getInt("aftergame.broadcast.stay", 10);
         int fadeOut = instance.getConfig().getInt("aftergame.broadcast.fade-out", 5);
-        messenger.runCountdownBroadcast(aftergameDuration, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true);
+        messenger.runCountdownBroadcast(aftergameDuration, showtime, soundList, titleStr, subtitleStr, fadeIn, stay, fadeOut, "%endtime%", true, tasks);
         new BukkitRunnable() {
             public void run() { stopAftergame(); }
         }.runTaskLater(instance, aftergameDuration * 20L);
