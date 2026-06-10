@@ -54,22 +54,22 @@ item:
 color-picker:
   title: '&4&l选择颜色'
   colors:
-    - {wool: 0, name: '&f白色', slot: 0}
-    - {wool: 1, name: '&6橙色', slot: 1}
-    - {wool: 2, name: '&5品红色', slot: 2}
-    - {wool: 3, name: '&b淡蓝色', slot: 3}
-    - {wool: 4, name: '&e黄色', slot: 4}
-    - {wool: 5, name: '&a黄绿色', slot: 5}
-    - {wool: 6, name: '&d粉红色', slot: 6}
-    - {wool: 7, name: '&8灰色', slot: 7}
-    - {wool: 8, name: '&7淡灰色', slot: 8}
-    - {wool: 9, name: '&3青色', slot: 10}
-    - {wool: 10, name: '&5紫色', slot: 11}
-    - {wool: 11, name: '&9蓝色', slot: 12}
-    - {wool: 12, name: '&6棕色', slot: 13}
-    - {wool: 13, name: '&2绿色', slot: 14}
-    - {wool: 14, name: '&c红色', slot: 15}
-    - {wool: 15, name: '&0黑色', slot: 16}
+    - {wool: 0, name: '&f&l白色', slot: 0}
+    - {wool: 1, name: '&6&l橙色', slot: 1}
+    - {wool: 2, name: '&5&l品红色', slot: 2}
+    - {wool: 3, name: '&b&l淡蓝色', slot: 3}
+    - {wool: 4, name: '&e&l黄色', slot: 4}
+    - {wool: 5, name: '&a&l黄绿色', slot: 5}
+    - {wool: 6, name: '&d&l粉红色', slot: 6}
+    - {wool: 7, name: '&8&l灰色', slot: 7}
+    - {wool: 8, name: '&7&l淡灰色', slot: 8}
+    - {wool: 9, name: '&3&l青色', slot: 10}
+    - {wool: 10, name: '&5&l紫色', slot: 11}
+    - {wool: 11, name: '&9&l蓝色', slot: 12}
+    - {wool: 12, name: '&6&l棕色', slot: 13}
+    - {wool: 13, name: '&2&l绿色', slot: 14}
+    - {wool: 14, name: '&c&l红色', slot: 15}
+    - {wool: 15, name: '&0&l黑色', slot: 16}
 
 beforestart:
   time: 15

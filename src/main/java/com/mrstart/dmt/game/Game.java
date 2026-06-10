@@ -34,7 +34,7 @@ public class Game {
     private Map<Player, Integer> foodLevel = new HashMap<Player, Integer>();
     private List<Player> hasFound = new ArrayList<Player>();
     private Map<Player, Integer> roundGainedScore = new HashMap<Player, Integer>();
-    private List<String> usedWords = new ArrayList<String>();
+    private List<Integer> usedWordGroups = new ArrayList<Integer>();
 
     private Player builder;
     private int players = 0;
@@ -345,7 +345,7 @@ public class Game {
         round = instance.getConfig().getInt("game.round", 2);
         if (players < 3) round = Math.max(round, 3);
         roundCount = 0;
-        usedWords.clear();
+        usedWordGroups.clear();
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
         messenger.sendStartedBroadcast();
@@ -403,12 +403,18 @@ public class Game {
     }
 
     private String getNewWord() {
-        List<String> words = instance.getWords();
-        List<String> available = new ArrayList<String>();
-        for (String w : words) { if (!usedWords.contains(w)) available.add(w); }
-        if (available.isEmpty()) { usedWords.clear(); available.addAll(words); }
-        String chosen = available.get(new Random().nextInt(available.size()));
-        usedWords.add(chosen);
+        List<List<String>> groups = instance.getWordGroups();
+        if (groups == null || groups.isEmpty()) return "unknown";
+        List<Integer> available = new ArrayList<Integer>();
+        for (int i = 0; i < groups.size(); i++) {
+            if (!usedWordGroups.contains(i)) available.add(i);
+        }
+        if (available.isEmpty()) { usedWordGroups.clear(); for (int i = 0; i < groups.size(); i++) available.add(i); }
+        int chosenGroupIndex = available.get(new Random().nextInt(available.size()));
+        List<String> group = groups.get(chosenGroupIndex);
+        if (group == null || group.isEmpty()) return "unknown";
+        String chosen = group.get(new Random().nextInt(group.size()));
+        usedWordGroups.add(chosenGroupIndex);
         return chosen;
     }
 
@@ -587,7 +593,7 @@ public class Game {
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; nextRoundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();
         builder = null; word = null; wordf = null;
-        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear(); usedWords.clear(); hintCount = 0;
+        hasFound.clear(); roundGainedScore.clear(); hasBeenBuilder.clear(); usedWordGroups.clear(); hintCount = 0;
         if (buildzone != null) { buildzone.clear(); buildzone.setWool(DyeColor.WHITE); }
         List<Player> toKick = new ArrayList<Player>(score.keySet());
         for (Player p : toKick) leave(p);

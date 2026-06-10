@@ -20,7 +20,7 @@ import java.util.*;
 public class DrawMyThing extends JavaPlugin {
 
     private List<Game> games = new ArrayList<Game>();
-    private List<String> words = new ArrayList<String>();
+    private List<List<String>> words = new ArrayList<List<String>>();
     private GameListener gameListener;
 
     private File gamesFile;
@@ -105,8 +105,20 @@ public class DrawMyThing extends JavaPlugin {
 
     public void loadWords() {
         words.clear();
-        List<String> wordList = wordsConfig.getStringList("words");
-        if (wordList != null && !wordList.isEmpty()) words.addAll(wordList);
+        List<?> raw = wordsConfig.getList("words");
+        if (raw == null) return;
+        for (Object o : raw) {
+            if (o instanceof String) {
+                words.add(Collections.singletonList((String) o));
+            } else if (o instanceof List) {
+                List<?> inner = (List<?>) o;
+                List<String> group = new ArrayList<String>();
+                for (Object item : inner) {
+                    if (item != null) group.add(String.valueOf(item));
+                }
+                if (!group.isEmpty()) words.add(group);
+            }
+        }
     }
 
     public void loadGames() {
@@ -124,12 +136,20 @@ public class DrawMyThing extends JavaPlugin {
         saveGamesFile();
     }
 
-    public List<String> getWords() { return words; }
-    public String getRandomWord() {
-        if (words.isEmpty()) return "unknown";
-        return words.get(new Random().nextInt(words.size()));
+    public List<String> getWords() {
+        List<String> flat = new ArrayList<String>();
+        for (List<String> g : words) flat.addAll(g);
+        return flat;
     }
 
+    public String getRandomWord() {
+        if (words.isEmpty()) return "unknown";
+        List<String> group = words.get(new Random().nextInt(words.size()));
+        if (group.isEmpty()) return "unknown";
+        return group.get(new Random().nextInt(group.size()));
+    }
+
+    public List<List<String>> getWordGroups() { return words; }
     public Game getGameByName(String name) {
         for (Game game : games) { if (game.getName().equalsIgnoreCase(name)) return game; }
         return null;
