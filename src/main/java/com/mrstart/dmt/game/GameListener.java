@@ -47,14 +47,15 @@ public class GameListener implements Listener {
         List<Game> games = instance.getGames();
         if (games.isEmpty()) return;
         Game game = games.get(0);
+        if (event.getPlayer().hasPermission("dmt.spec")) return;
         if (game.isStarted()) {
+            String msg;
             if (game.isAftergameRunning()) {
-                String msg = instance.getConfig().getString("kick.ending", "&c游戏正在结束, 无法加入");
-                event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatUtil.colorize(msg));
+                msg = instance.getConfig().getString("kick.ending", "&c游戏正在结束, 无法加入");
             } else {
-                String msg = instance.getConfig().getString("kick.start", "&c游戏已开始, 无法加入");
-                event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatUtil.colorize(msg));
+                msg = instance.getConfig().getString("kick.start", "&c游戏已开始, 无法加入");
             }
+            event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatUtil.colorize(msg));
         } else if (game.getPlayerCount() >= game.getMaxPlayers()) {
             String msg = instance.getConfig().getString("kick.full", "&c房间已满, 无法加入");
             event.disallow(PlayerLoginEvent.Result.KICK_FULL, ChatUtil.colorize(msg));
@@ -68,6 +69,7 @@ public class GameListener implements Listener {
         List<Game> games = instance.getGames();
         if (games.isEmpty()) return;
         Game game = games.get(0);
+        event.setMaxPlayers(game.getMaxPlayers());
         String motdWait = instance.getConfig().getString("motd.wait", "");
         String motdFull = instance.getConfig().getString("motd.full", "");
         String motdStart = instance.getConfig().getString("motd.start", "");

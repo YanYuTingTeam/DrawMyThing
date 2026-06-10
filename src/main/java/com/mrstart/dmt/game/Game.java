@@ -174,7 +174,11 @@ public class Game {
     }
 
     public void join(Player player) {
-        if (started || aftergameRunning || players >= maxplayers || score.containsKey(player)) return;
+        if (started || players >= maxplayers) {
+            player.setGameMode(GameMode.SPECTATOR);
+            return;
+        }
+        if (aftergameRunning || score.containsKey(player)) return;
         player.setMetadata("oldLoc", new org.bukkit.metadata.FixedMetadataValue(instance, LocationUtil.LocationToString(player.getLocation())));
         Location teleportTarget = lobby != null ? lobby : spawn;
         if (teleportTarget != null) player.teleport(teleportTarget);
