@@ -224,7 +224,7 @@ public class Game {
             ChatUtil.sendMsg(p, "player-joined", "%player%", player.getName(), "%count%", String.valueOf(players), "%max%", String.valueOf(maxplayers));
         }
 
-        scoreboard.startWaitingScoreboard();
+        if (!waiting && !started) scoreboard.startWaitingScoreboard();
         if (players >= minplayers && !waiting) {
             waiting = true;
             countdownDuration = instance.getConfig().getInt("beforestart.time", 10);
