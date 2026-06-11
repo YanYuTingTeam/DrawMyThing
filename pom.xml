@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.mrstart</groupId>
+    <groupId>com.aermini</groupId>
     <artifactId>DrawMyThing</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
@@ -22,6 +22,10 @@
         <repository>
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <repository>
+            <id>protocollib-repo</id>
+            <url>https://minevolt.net/repo/</url>
         </repository>
     </repositories>
 
@@ -42,6 +46,12 @@
             <groupId>net.md-5</groupId>
             <artifactId>bungeecord-chat</artifactId>
             <version>1.20-R0.2</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.comphenix.protocol</groupId>
+            <artifactId>ProtocolLib</artifactId>
+            <version>4.4.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

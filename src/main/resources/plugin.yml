@@ -1,8 +1,8 @@
 name: DrawMyThing
 version: 1.0.0
-main: com.mrstart.dmt.DrawMyThing
-author: mrstart
-description: A Draw My Thing minigame plugin
+main: com.aermini.dmt.DrawMyThing
+authors: [ShadowUniverse, AerMini, YukiEnd]
+description: DrawMyThing. 横跨12年的更新. 还原《花雨庭》特性
 api-version: 1.8
 
 commands:

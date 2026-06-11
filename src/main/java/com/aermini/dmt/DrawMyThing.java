@@ -1,14 +1,13 @@
-package com.mrstart.dmt;
+package com.aermini.dmt;
 
-import com.mrstart.dmt.game.Game;
-import com.mrstart.dmt.game.GameListener;
+import com.aermini.dmt.game.Game;
+import com.aermini.dmt.game.GameListener;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -58,6 +57,7 @@ public class DrawMyThing extends JavaPlugin {
         commandHandler = new DMTCommandHandler(this);
 
         PluginManager pm = getServer().getPluginManager();
+        pm.registerEvents(commandHandler, this);
         gameListener = new GameListener(this);
         pm.registerEvents(gameListener, this);
 

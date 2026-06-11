@@ -1,4 +1,4 @@
-package com.mrstart.dmt;
+package com.aermini.dmt;
 
 import org.bukkit.DyeColor;
 import org.bukkit.Material;

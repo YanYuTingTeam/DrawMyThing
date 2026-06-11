@@ -1,7 +1,7 @@
-package com.mrstart.dmt.game;
+package com.aermini.dmt.game;
 
-import com.mrstart.dmt.ChatUtil;
-import com.mrstart.dmt.DrawMyThing;
+import com.aermini.dmt.ChatUtil;
+import com.aermini.dmt.DrawMyThing;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;

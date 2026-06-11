@@ -1,11 +1,10 @@
-package com.mrstart.dmt.game;
+package com.aermini.dmt.game;
 
-import com.mrstart.dmt.ChatUtil;
-import com.mrstart.dmt.DrawMyThing;
-import com.mrstart.dmt.LocationUtil;
-import com.mrstart.dmt.cuboid.CuboidZone;
-import com.mrstart.dmt.task.*;
-import com.mrstart.dmt.task.TaskXpCountdown;
+import com.aermini.dmt.ChatUtil;
+import com.aermini.dmt.DrawMyThing;
+import com.aermini.dmt.LocationUtil;
+import com.aermini.dmt.cuboid.CuboidZone;
+import com.aermini.dmt.task.*;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -584,11 +583,11 @@ public class Game {
         xpTask = t;
     }
 
-    public void clearXpTask(com.mrstart.dmt.task.TaskXpCountdown t) {
+    public void clearXpTask(TaskXpCountdown t) {
         if (xpTask == t) xpTask = null;
     }
 
-    public com.mrstart.dmt.task.TaskXpCountdown getXpTask() { return xpTask; }
+    public TaskXpCountdown getXpTask() { return xpTask; }
 
     public void stop() {
         started = false; waiting = false; countdownStartTime = 0; aftergameRunning = false; aftergameStartTime = 0; roundEndTime = 0; nextRoundEndTime = 0; builderFreezeEndTime = 0; cancelTasks(); scoreboard.clearScoreboard();

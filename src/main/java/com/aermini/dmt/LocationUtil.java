@@ -1,4 +1,4 @@
-package com.mrstart.dmt;
+package com.aermini.dmt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;

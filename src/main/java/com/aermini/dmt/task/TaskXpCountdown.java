@@ -1,7 +1,6 @@
-package com.mrstart.dmt.task;
+package com.aermini.dmt.task;
 
-import com.mrstart.dmt.game.Game;
-import org.bukkit.Bukkit;
+import com.aermini.dmt.game.Game;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 

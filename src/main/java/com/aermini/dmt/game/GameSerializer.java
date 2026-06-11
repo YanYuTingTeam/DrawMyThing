@@ -1,8 +1,8 @@
-package com.mrstart.dmt.game;
+package com.aermini.dmt.game;
 
-import com.mrstart.dmt.DrawMyThing;
-import com.mrstart.dmt.LocationUtil;
-import com.mrstart.dmt.cuboid.CuboidZone;
+import com.aermini.dmt.DrawMyThing;
+import com.aermini.dmt.LocationUtil;
+import com.aermini.dmt.cuboid.CuboidZone;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;

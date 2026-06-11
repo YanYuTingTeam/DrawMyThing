@@ -1,4 +1,4 @@
-package com.mrstart.dmt.cuboid;
+package com.aermini.dmt.cuboid;
 
 import java.util.ArrayList;
 import java.util.List;

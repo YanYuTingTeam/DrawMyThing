@@ -1,7 +1,7 @@
-package com.mrstart.dmt;
+package com.aermini.dmt;
 
-import com.mrstart.dmt.game.Game;
-import com.mrstart.dmt.game.GameSerializer;
+import com.aermini.dmt.game.Game;
+import com.aermini.dmt.game.GameSerializer;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -12,16 +12,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class DMTCommandHandler {
+public class DMTCommandHandler implements org.bukkit.event.Listener {
 
     private final DrawMyThing instance;
 
     public DMTCommandHandler(DrawMyThing instance) {
         this.instance = instance;
+        //registerPacketListener();
     }
 
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!cmd.getName().equalsIgnoreCase("dmt")) return false;
+        if (!cmd.getName().equalsIgnoreCase("dmt")&&!cmd.getName().equalsIgnoreCase("drawmything")) return false;
         if (!(sender instanceof Player)) { sender.sendMessage(ChatUtil.getMessage("player-only")); return true; }
 
         Player player = (Player) sender;
@@ -293,8 +294,60 @@ public class DMTCommandHandler {
         ChatUtil.sendMsg(player, "game-reloaded");
     }
 
+    @org.bukkit.event.EventHandler(priority=org.bukkit.event.EventPriority.LOWEST)
+    public void onPlayerCommandPreprocess(org.bukkit.event.player.PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        if (player.hasPermission("dmt.admin")) return;
+        String message = event.getMessage().trim().toLowerCase().replaceAll("\\s+", " ");
+        if (message.equals("/pl") || message.startsWith("/pl ") || message.equals("/plugins") || message.startsWith("/plugins ")) {
+            event.setCancelled(true);
+            player.sendMessage(ChatUtil.colorize("&fPlugins (1): &aDrawMyThing"));
+            return;}
+        String args = message.contains(" ") ? message.substring(message.indexOf(" ") + 1).trim() : "";
+        if (message.equals("/ver") || message.startsWith("/ver ") || message.equals("/version") || message.startsWith("/version ")) {
+            event.setCancelled(true);
+            if (args.equals("drawmything")) {
+                player.sendMessage(ChatUtil.colorize("&aDrawMyThing &fversion &a"+instance.getDescription().getVersion()));
+                player.sendMessage(ChatUtil.colorize(instance.getDescription().getDescription()));
+                player.sendMessage(ChatUtil.colorize("Authors: &aShadowUniverse&f, &aAerMini &fand &aYukiEnd"));
+                return;
+            } checkAdmin(player);}
+    }
+
+    //private void registerPacketListener() {
+    //    com.comphenix.protocol.ProtocolManager manager = com.comphenix.protocol.ProtocolLibrary.getProtocolManager();
+    //    manager.addPacketListener(new com.comphenix.protocol.events.PacketAdapter(this.instance,
+    //            com.comphenix.protocol.PacketType.Play.Client.TAB_COMPLETE) {
+    //        @Override
+    //        public void onPacketReceiving(com.comphenix.protocol.events.PacketEvent event) {
+    //            Player p = event.getPlayer();
+    //            if (p.hasPermission("dmt.admin")) return;
+    //            String command = event.getPacket().getStrings().read(0).toLowerCase();
+    //            if (command.startsWith("/")) {
+    //                event.setCancelled(true);
+    //                String cleanCommand = command.replaceAll("\\s+", " ");
+    //                if (cleanCommand.startsWith("/ver ") || cleanCommand.startsWith("/version ")) {
+    //                    String[] parts = cleanCommand.split(" ");
+    //                    String lastArg = parts.length > 1 ? parts[parts.length - 1] : "";
+    //                    if ("drawmything".startsWith(lastArg)) {
+    //                        com.comphenix.protocol.events.PacketContainer response
+    //                                = new com.comphenix.protocol.events.PacketContainer(com.comphenix.protocol.PacketType.Play.Server.TAB_COMPLETE);
+    //                        response.getStringArrays().write(0, new String[]{"drawmything"});
+    //                        try {
+    //                            manager.sendServerPacket(p, response);
+    //                        } catch (Exception e) {
+    //                            e.printStackTrace();}}
+    //                }}
+    //        }
+    //    });
+    //}
+
     private void sendHelp(Player player) {
-        player.sendMessage(ChatUtil.colorize("&e&lDrawMyThing &r&7for &b&lYanYuTing &8| &fby. &fmrstart, &dAerMini"));
+        player.sendMessage(ChatUtil.colorize("&e&lDrawMyThing &r&7for &b&lYanYuTing"));
+        player.sendMessage(ChatUtil.colorize("&fAuthors: "));
+        player.sendMessage(ChatUtil.colorize("&bShadowUniverse &8| &dhttps://github.com/ShadowUniverse"));
+        player.sendMessage(ChatUtil.colorize("&bAerMini &8| &dhttps://github.com/AerMini2024"));
+        player.sendMessage(ChatUtil.colorize("&dYukiEnd &8| &dhttps://github.com/LinMoyuu"));
         if (player.hasPermission("dmt.admin")) {
             player.sendMessage(ChatUtil.colorize("&f/dmt create <gameName> &7- 创建游戏"));
             player.sendMessage(ChatUtil.colorize("&f/dmt delete <gameName> &7- 删除游戏"));

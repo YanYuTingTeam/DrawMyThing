@@ -1,9 +1,9 @@
-package com.mrstart.dmt.game;
+package com.aermini.dmt.game;
 
-import com.mrstart.dmt.ChatUtil;
-import com.mrstart.dmt.DrawMyThing;
-import com.mrstart.dmt.ItemManager;
-import com.mrstart.dmt.cuboid.CuboidZone;
+import com.aermini.dmt.ChatUtil;
+import com.aermini.dmt.DrawMyThing;
+import com.aermini.dmt.ItemManager;
+import com.aermini.dmt.cuboid.CuboidZone;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
