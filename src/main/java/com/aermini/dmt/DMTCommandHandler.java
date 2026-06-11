@@ -311,7 +311,7 @@ public class DMTCommandHandler implements org.bukkit.event.Listener {
                 player.sendMessage(ChatUtil.colorize(instance.getDescription().getDescription()));
                 player.sendMessage(ChatUtil.colorize("Authors: &aShadowUniverse&f, &aAerMini &fand &aYukiEnd"));
                 return;
-            } checkAdmin(player);}
+            }}
     }
 
     //private void registerPacketListener() {
