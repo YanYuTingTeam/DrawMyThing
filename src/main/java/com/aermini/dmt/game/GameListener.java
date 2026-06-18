@@ -37,6 +37,7 @@ public class GameListener implements Listener {
     private Map<Player, BukkitTask> paintTasks = new HashMap<Player, BukkitTask>();
     private Map<Player, Block> lastPaintedBlock = new HashMap<Player, Block>();
     private Map<Player, Long> freezeSoundCooldown = new HashMap<Player, Long>();
+    private Map<Player, Long> paintTaskStartTime = new HashMap<Player, Long>();
 
     public GameListener(DrawMyThing instance) {
         this.instance = instance;
@@ -241,10 +242,9 @@ public class GameListener implements Listener {
         }
 
         if (action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK) {
+            cancelPaintTask(player);
             if (isPencilItem(item) || isBigPencilItem(item) || isColorPickerItem(item)) {
                 player.openInventory(instance.getItemManager().cci);
-            } else {
-                cancelPaintTask(player);
             }
             return;
         }
@@ -392,6 +392,9 @@ public class GameListener implements Listener {
         Game game = getGame(player);
         if (game == null || !game.isStarted()) return;
         if (game.getBuilder() == null || !game.getBuilder().equals(player)) return;
+        if (!paintTasks.containsKey(player)) return;
+        Long startTime = paintTaskStartTime.get(player);
+        if (startTime != null && System.currentTimeMillis() - startTime < 50) return;
         ItemStack hand = player.getItemInHand();
         if (hand != null && (isPencilItem(hand) || isBigPencilItem(hand))) {
             cancelPaintTask(player);
@@ -405,6 +408,7 @@ public class GameListener implements Listener {
                 ItemStack hand = player.getItemInHand();
                 if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
 
+                if (hand.getType().name().endsWith("_SWORD") && !player.isBlocking()) { cancelPaintTask(player); return; }
                 Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
                 if (b.getType() != Material.WOOL) return;
                 CuboidZone zone = game.getBuildZone();
@@ -443,6 +447,7 @@ public class GameListener implements Listener {
             }
         }.runTaskTimer(instance, 1L, 1L);
         paintTasks.put(player, task);
+        paintTaskStartTime.put(player, System.currentTimeMillis());
     }
 
     private void paintLine(Block from, Block to, byte data, CuboidZone zone, boolean big, Player player) {
@@ -519,6 +524,7 @@ public class GameListener implements Listener {
         BukkitTask task = paintTasks.remove(player);
         if (task != null) task.cancel();
         lastPaintedBlock.remove(player);
+        paintTaskStartTime.remove(player);
     }
 
     public void stopPlayerPaintTask(Player player) {
@@ -529,6 +535,7 @@ public class GameListener implements Listener {
         for (Player p : new java.util.ArrayList<Player>(paintTasks.keySet())) cancelPaintTask(p);
         lastPaintedBlock.clear();
         freezeSoundCooldown.clear();
+        paintTaskStartTime.clear();
     }
 
     private boolean matchItem(ItemStack item, String configPath, Material defaultMat, short defaultData) {
