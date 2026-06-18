@@ -385,13 +385,26 @@ public class GameListener implements Listener {
         if (event.isSneaking()) cancelPaintTask(event.getPlayer());
     }
 
+    @EventHandler
+    public void onPlayerAnimation(PlayerAnimationEvent event) {
+        Player player = event.getPlayer();
+        if (!isInGame(player)) return;
+        Game game = getGame(player);
+        if (game == null || !game.isStarted()) return;
+        if (game.getBuilder() == null || !game.getBuilder().equals(player)) return;
+        ItemStack hand = player.getItemInHand();
+        if (hand != null && (isPencilItem(hand) || isBigPencilItem(hand))) {
+            cancelPaintTask(player);
+        }
+    }
+
     private void startPaintTask(final Player player, final Game game, final boolean big) {
         BukkitTask task = new BukkitRunnable() {
             public void run() {
                 if (!player.isOnline() || !isInGame(player)) { cancelPaintTask(player); return; }
                 ItemStack hand = player.getItemInHand();
                 if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
-                if (hand.getType().name().endsWith("_SWORD") && !player.isBlocking()) { cancelPaintTask(player); return; }
+
                 Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
                 if (b.getType() != Material.WOOL) return;
                 CuboidZone zone = game.getBuildZone();
