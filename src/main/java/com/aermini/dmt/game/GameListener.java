@@ -253,6 +253,8 @@ public class GameListener implements Listener {
             cancelPaintTask(player);
             Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
             if (b.getType() != Material.WOOL) return;
+            CuboidZone zone = game.getBuildZone();
+            if (zone != null && !zone.contains(b)) return;
             b.setTypeIdAndData(Material.WOOL.getId(), pencilColor.getData(), true);
             lastPaintedBlock.put(player, b);
             playItemSound(game, player, "item.pencil", Sound.FIZZ);

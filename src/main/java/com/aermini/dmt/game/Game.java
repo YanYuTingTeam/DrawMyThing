@@ -36,6 +36,7 @@ public class Game {
     private List<Integer> usedWordGroups = new ArrayList<Integer>();
 
     private Player builder;
+    private String roundBuilderName = null;
     private int players = 0;
     private int minplayers = 2;
     private int maxplayers = 12;
@@ -78,6 +79,7 @@ public class Game {
         this.messenger = new GameMessenger(this, instance);
     }
 
+    public String getRoundBuilderName() { return roundBuilderName; }
     public String getName() { return name; }
     public String getRegion() { return region; }
     public Player getBuilder() { return builder; }
@@ -501,6 +503,7 @@ public class Game {
 
     private void setBuilder(Player p) {
         builder = p;
+        roundBuilderName = p.getName();
         hasBeenBuilder.put(p, hasBeenBuilder.get(p) + 1);
         final Player fp = p;
         int delay = instance.getConfig().getInt("game.builder-teleport-delay", 1);

@@ -31,6 +31,8 @@ public class GameMessenger {
         result = result.replace("%round_all%", String.valueOf(game.getRound() * game.getScoreMap().size()));
         if (game.getBuilder() != null) {
             result = result.replace("%builder_player%", game.getBuilder().getName());
+        } else if (game.getRoundBuilderName() != null) {
+            result = result.replace("%builder_player%", game.getRoundBuilderName());
         }
         if (player != null) {
             result = result.replace("%player%", player.getName());
