@@ -5,6 +5,7 @@ import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.LocationUtil;
 import com.aermini.dmt.cuboid.CuboidZone;
 import com.aermini.dmt.task.*;
+import com.aermini.dmt.util.SoundCompat;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -79,7 +80,6 @@ public class Game {
         this.messenger = new GameMessenger(this, instance);
     }
 
-    public String getRoundBuilderName() { return roundBuilderName; }
     public String getName() { return name; }
     public String getRegion() { return region; }
     public Player getBuilder() { return builder; }
@@ -142,6 +142,7 @@ public class Game {
     public void setNextRoundEndTime(long time) { this.nextRoundEndTime = time; }
     public long getBuilderFreezeEndTime() { return builderFreezeEndTime; }
     public DrawMyThing getInstance() { return instance; }
+    public String getRoundBuilderName() { return roundBuilderName; }
 
     public Location getBuilderBoundaryPos1() { return builderBoundaryPos1; }
     public Location getBuilderBoundaryPos2() { return builderBoundaryPos2; }
@@ -440,7 +441,7 @@ public class Game {
             return;
         }
         hasFound.add(player);
-        messenger.playSoundForAll(Sound.NOTE_PIANO, 1.0f, 1.0f);
+        messenger.playSoundForAll(SoundCompat.getSound("NOTE_PIANO"), 1.0f, 1.0f);
         int gained = 0;
         if (!wordHasBeenFound) {
             messenger.sendMsg("first-found", "%player%", player.getName());

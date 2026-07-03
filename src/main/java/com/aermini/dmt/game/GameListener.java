@@ -4,6 +4,7 @@ import com.aermini.dmt.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.ItemManager;
 import com.aermini.dmt.cuboid.CuboidZone;
+import com.aermini.dmt.util.SoundCompat;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -145,7 +146,8 @@ public class GameListener implements Listener {
                 String soundStr = instance.getConfig().getString("game.builderToPlanter.sound", "NOTE_BASS,1,1");
                 try {
                     String[] sp = soundStr.split(",");
-                    Sound sound = Sound.valueOf(sp[0].trim());
+                    Sound sound = SoundCompat.getSound(sp[0].trim());
+                    if (sound == null) return;
                     float volume = sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f;
                     float pitch = sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f;
                     player.playSound(player.getLocation(), sound, volume, pitch);
@@ -169,11 +171,11 @@ public class GameListener implements Listener {
             CuboidZone zone = game.getBuildZone();
             if (zone != null) zone.setWool(DyeColor.WHITE);
             cancelPaintTask(player);
-            playItemSound(game, player, "item.eraser", Sound.EXPLODE);
+            playItemSound(game, player, "item.eraser", SoundCompat.getSound("EXPLODE"));
         } else if (isColorPickerItem(item)) {
             CuboidZone zone = game.getBuildZone();
             if (zone != null) zone.setWool(pencilColor);
-            playItemSound(game, player, "item.color-picker", Sound.SPLASH);
+            playItemSound(game, player, "item.color-picker", SoundCompat.getSound("SPLASH"));
         }
     }
 
@@ -257,7 +259,7 @@ public class GameListener implements Listener {
             if (zone != null && !zone.contains(b)) return;
             b.setTypeIdAndData(Material.WOOL.getId(), pencilColor.getData(), true);
             lastPaintedBlock.put(player, b);
-            playItemSound(game, player, "item.pencil", Sound.FIZZ);
+            playItemSound(game, player, "item.pencil", SoundCompat.getSound("FIZZ"));
             startPaintTask(player, game, false);
             return;
         }
@@ -297,7 +299,7 @@ public class GameListener implements Listener {
             if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
             if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
             lastPaintedBlock.put(player, b);
-            playItemSound(game, player, "item.big-pencil", Sound.FIZZ);
+            playItemSound(game, player, "item.big-pencil", SoundCompat.getSound("FIZZ"));
             startPaintTask(player, game, true);
             return;
         }
@@ -306,14 +308,14 @@ public class GameListener implements Listener {
             CuboidZone zone = game.getBuildZone();
             if (zone != null) zone.setWool(DyeColor.WHITE);
             cancelPaintTask(player);
-            playItemSound(game, player, "item.eraser", Sound.EXPLODE);
+            playItemSound(game, player, "item.eraser", SoundCompat.getSound("EXPLODE"));
             return;
         }
 
         if (isColorPickerItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             CuboidZone zone = game.getBuildZone();
             if (zone != null) zone.setWool(pencilColor);
-            playItemSound(game, player, "item.color-picker", Sound.SPLASH);
+            playItemSound(game, player, "item.color-picker", SoundCompat.getSound("SPLASH"));
             return;
         }
     }
@@ -368,7 +370,7 @@ public class GameListener implements Listener {
             if (clicked.getType() == Material.WOOL) {
                 byte woolData = (byte)clicked.getDurability();
                 pencilColor = ItemManager.woolDataToDyeColor(woolData);
-                player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1.0f, 1.0f);
+                player.playSound(player.getLocation(), SoundCompat.getSound("ORB_PICKUP"), 1.0f, 1.0f);
             }
             player.closeInventory();
         } else {
@@ -603,7 +605,8 @@ public class GameListener implements Listener {
         if (soundStr != null && !soundStr.isEmpty()) {
             try {
                 String[] parts = soundStr.split(",");
-                sound = Sound.valueOf(parts[0].trim());
+                Sound parsed = SoundCompat.getSound(parts[0].trim());
+                if (parsed != null) sound = parsed;
                 if (parts.length > 1) volume = Float.parseFloat(parts[1].trim());
                 if (parts.length > 2) pitch = Float.parseFloat(parts[2].trim());
             } catch (Exception ignored) {}
@@ -622,14 +625,16 @@ public class GameListener implements Listener {
         ItemStack hand = player.getItemInHand();
         if (hand == null) return;
         String configPath = isBigPencilItem(hand) ? "item.big-pencil" : "item.pencil";
-        Sound sound = Sound.FIZZ;
+        Sound sound = SoundCompat.getSound("FIZZ");
+        if (sound == null) return;
         float volume = 1.0f;
         float pitch = 1.0f;
         String soundStr = instance.getConfig().getString(configPath + ".sound", null);
         if (soundStr != null && !soundStr.isEmpty()) {
             try {
                 String[] parts = soundStr.split(",");
-                sound = Sound.valueOf(parts[0].trim());
+                Sound parsed = SoundCompat.getSound(parts[0].trim());
+                if (parsed != null) sound = parsed;
                 if (parts.length > 1) volume = Float.parseFloat(parts[1].trim());
                 if (parts.length > 2) pitch = Float.parseFloat(parts[2].trim());
             } catch (Exception ignored) {}

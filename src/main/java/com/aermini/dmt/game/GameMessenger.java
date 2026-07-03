@@ -2,6 +2,7 @@ package com.aermini.dmt.game;
 
 import com.aermini.dmt.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
+import com.aermini.dmt.util.SoundCompat;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -98,7 +99,9 @@ public class GameMessenger {
             if (s == null || s.isEmpty()) continue;
             try {
                 String[] sp = s.split(",");
-                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+                Sound parsed = SoundCompat.getSound(sp[0].trim());
+                if (parsed == null) continue;
+                playSoundForAll(parsed, sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
             } catch (Exception ignored) {}
         }
     }
@@ -162,7 +165,8 @@ public class GameMessenger {
         if (soundStr != null && !soundStr.isEmpty()) {
             try {
                 String[] sp = soundStr.split(",");
-                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+                Sound snd = SoundCompat.getSound(sp[0].trim());
+                if (snd != null) playSoundForAll(snd, sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
             } catch (Exception ignored) {}
         }
     }
@@ -199,7 +203,8 @@ public class GameMessenger {
         if (soundStr != null && !soundStr.isEmpty()) {
             try {
                 String[] sp = soundStr.split(",");
-                playSoundForAll(Sound.valueOf(sp[0].trim()), sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
+                Sound snd = SoundCompat.getSound(sp[0].trim());
+                if (snd != null) playSoundForAll(snd, sp.length > 1 ? Float.parseFloat(sp[1].trim()) : 1.0f, sp.length > 2 ? Float.parseFloat(sp[2].trim()) : 1.0f);
             } catch (Exception ignored) {}
         }
         String title = titleStr != null ? ChatUtil.colorize(titleStr.replace(timePlaceholder, String.valueOf(timeLeft))) : null;
