@@ -2,6 +2,7 @@ package com.aermini.dmt;
 
 import com.aermini.dmt.game.Game;
 import com.aermini.dmt.game.GameListener;
+import com.aermini.dmt.util.ChatUtil;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
