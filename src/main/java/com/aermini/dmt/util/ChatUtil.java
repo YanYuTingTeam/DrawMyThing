@@ -1,5 +1,6 @@
-package com.aermini.dmt;
+package com.aermini.dmt.util;
 
+import com.aermini.dmt.DrawMyThing;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 

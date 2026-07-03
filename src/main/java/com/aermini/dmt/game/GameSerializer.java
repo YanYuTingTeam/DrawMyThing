@@ -1,7 +1,7 @@
 package com.aermini.dmt.game;
 
 import com.aermini.dmt.DrawMyThing;
-import com.aermini.dmt.LocationUtil;
+import com.aermini.dmt.util.LocationUtil;
 import com.aermini.dmt.cuboid.CuboidZone;
 import org.bukkit.Location;
 import org.bukkit.World;

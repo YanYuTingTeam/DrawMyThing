@@ -1,6 +1,6 @@
 package com.aermini.dmt.game;
 
-import com.aermini.dmt.ChatUtil;
+import com.aermini.dmt.util.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.util.SoundCompat;
 import org.bukkit.*;

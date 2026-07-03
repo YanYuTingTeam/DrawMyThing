@@ -1,8 +1,8 @@
 package com.aermini.dmt.game;
 
-import com.aermini.dmt.ChatUtil;
+import com.aermini.dmt.util.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
-import com.aermini.dmt.LocationUtil;
+import com.aermini.dmt.util.LocationUtil;
 import com.aermini.dmt.cuboid.CuboidZone;
 import com.aermini.dmt.task.*;
 import com.aermini.dmt.util.SoundCompat;

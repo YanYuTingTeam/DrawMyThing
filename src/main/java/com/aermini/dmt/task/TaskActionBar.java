@@ -1,6 +1,6 @@
 package com.aermini.dmt.task;
 
-import com.aermini.dmt.ChatUtil;
+import com.aermini.dmt.util.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.game.Game;
 import org.bukkit.entity.Player;

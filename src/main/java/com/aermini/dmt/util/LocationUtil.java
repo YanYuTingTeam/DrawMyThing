@@ -1,4 +1,4 @@
-package com.aermini.dmt;
+package com.aermini.dmt.util;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
