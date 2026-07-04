@@ -1,5 +1,6 @@
 package com.aermini.dmt.cuboid;
 
+import com.aermini.dmt.util.DyeColorCompat;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.DyeColor;
@@ -57,7 +58,8 @@ public class CuboidZone {
 
     public void setWool(DyeColor dc) {
         for (Block b : toArray()) {
-            b.setTypeIdAndData(Material.WOOL.getId(), dc.getData(), true);
+            byte data = DyeColorCompat.getData(dc);
+            b.setTypeIdAndData(Material.WOOL.getId(), data, true);
         }
     }
 }

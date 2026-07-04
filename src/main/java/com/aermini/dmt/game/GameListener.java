@@ -5,6 +5,7 @@ import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.ItemManager;
 import com.aermini.dmt.cuboid.CuboidZone;
 import com.aermini.dmt.util.SoundCompat;
+import com.aermini.dmt.util.DyeColorCompat;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -27,10 +28,9 @@ import org.bukkit.metadata.MetadataValue;
 
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
+import java.lang.reflect.Method;
 
 public class GameListener implements Listener {
     private DyeColor pencilColor = DyeColor.BLACK;
@@ -253,11 +253,11 @@ public class GameListener implements Listener {
 
         if (isPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             cancelPaintTask(player);
-            Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
-            if (b.getType() != Material.WOOL) return;
+            Block b = rayTraceWool(player, 100);
+            if (b == null || b.getType() != Material.WOOL) return;
             CuboidZone zone = game.getBuildZone();
             if (zone != null && !zone.contains(b)) return;
-            b.setTypeIdAndData(Material.WOOL.getId(), pencilColor.getData(), true);
+            b.setTypeIdAndData(Material.WOOL.getId(), DyeColorCompat.getData(pencilColor), true);
             lastPaintedBlock.put(player, b);
             playItemSound(game, player, "item.pencil", SoundCompat.getSound("FIZZ"));
             startPaintTask(player, game, false);
@@ -266,11 +266,11 @@ public class GameListener implements Listener {
 
         if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
             cancelPaintTask(player);
-            Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
-            if (b.getType() != Material.WOOL) return;
+            Block b = rayTraceWool(player, 100);
+            if (b == null || b.getType() != Material.WOOL) return;
             CuboidZone zone = game.getBuildZone();
             if (zone != null && !zone.contains(b)) return;
-            byte data = pencilColor.getData();
+            byte data = DyeColorCompat.getData(pencilColor);
             b.setTypeIdAndData(Material.WOOL.getId(), data, true);
             BlockFace face = event.getBlockFace();
             Block h1, h2, v1, v2;
@@ -389,22 +389,6 @@ public class GameListener implements Listener {
         if (event.isSneaking()) cancelPaintTask(event.getPlayer());
     }
 
-    @EventHandler
-    public void onPlayerAnimation(PlayerAnimationEvent event) {
-        Player player = event.getPlayer();
-        if (!isInGame(player)) return;
-        Game game = getGame(player);
-        if (game == null || !game.isStarted()) return;
-        if (game.getBuilder() == null || !game.getBuilder().equals(player)) return;
-        if (!paintTasks.containsKey(player)) return;
-        Long startTime = paintTaskStartTime.get(player);
-        if (startTime != null && System.currentTimeMillis() - startTime < 50) return;
-        ItemStack hand = player.getItemInHand();
-        if (hand != null && (isPencilItem(hand) || isBigPencilItem(hand))) {
-            cancelPaintTask(player);
-        }
-    }
-
     private void startPaintTask(final Player player, final Game game, final boolean big) {
         BukkitTask task = new BukkitRunnable() {
             public void run() {
@@ -413,11 +397,11 @@ public class GameListener implements Listener {
                 if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
 
                 if (hand.getType().name().endsWith("_SWORD") && !player.isBlocking()) { cancelPaintTask(player); return; }
-                Block b = player.getTargetBlock((HashSet<Byte>) null, 100);
-                if (b.getType() != Material.WOOL) return;
+                Block b = rayTraceWool(player, 100);
+                if (b == null || b.getType() != Material.WOOL) return;
                 CuboidZone zone = game.getBuildZone();
                 if (zone != null && !zone.contains(b)) return;
-                byte data = pencilColor.getData();
+                byte data = DyeColorCompat.getData(pencilColor);
                 Block last = lastPaintedBlock.get(player);
                 if (last != null && !last.equals(b)) {
                     paintLine(last, b, data, zone, big, player);
@@ -567,6 +551,19 @@ public class GameListener implements Listener {
     private boolean isEraserItem(ItemStack item) { return matchItem(item, "item.eraser", Material.TNT, (short) 0); }
     private boolean isColorPickerItem(ItemStack item) { return matchItem(item, "item.color-picker", Material.COMPASS, (short) 0); }
     private boolean isInGame(Player player) { return player.hasMetadata("inbmt"); }
+
+    private Block rayTraceWool(Player player, int maxDistance) {
+        Location eye = player.getEyeLocation();
+        org.bukkit.util.Vector dir = eye.getDirection().normalize();
+        double step = 0.5;
+        for (double d = 0; d < maxDistance; d += step) {
+            Location point = eye.clone().add(dir.clone().multiply(d));
+            Block b = point.getBlock();
+            if (b.getType() == Material.WOOL) return b;
+            if (b.getType() != Material.AIR) return null;
+        }
+        return null;
+    }
 
     private Game getGame(Player player) {
         String name = getMeta(player, "inbmt");

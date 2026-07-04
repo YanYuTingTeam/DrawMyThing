@@ -131,9 +131,20 @@ public class ChatUtil {
 
             Method aMethod = chatSerializer.getMethod("a", String.class);
             Object chatComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(message) + "\"}");
-            Object packet = packetChatClass.getConstructor(
+            Object packet;
+            try {
+                packet = packetChatClass.getConstructor(
                     getNMSClass("IChatBaseComponent"), byte.class)
                     .newInstance(chatComponent, (byte) 2);
+            } catch (NoSuchMethodException e) {
+                Class<?> chatMsgType = getNMSClass("ChatMessageType");
+                Object actionBar = null;
+                for (Object constant : chatMsgType.getEnumConstants()) {
+                    if (constant.toString().equals("GAME_INFO")) {actionBar=constant; break;}
+                }
+                packet = packetChatClass.getConstructor(getNMSClass("IChatBaseComponent"), chatMsgType)
+                    .newInstance(chatComponent, actionBar);
+            }
 
             sendPacket(player, packet);
         } catch (Exception e) {
