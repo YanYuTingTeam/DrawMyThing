@@ -252,55 +252,56 @@ public class GameListener implements Listener {
         }
 
         if (isPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
-            cancelPaintTask(player);
-            Block b = rayTraceWool(player, 100);
-            if (b == null || b.getType() != Material.WOOL) return;
-            CuboidZone zone = game.getBuildZone();
-            if (zone != null && !zone.contains(b)) return;
-            b.setTypeIdAndData(Material.WOOL.getId(), DyeColorCompat.getData(pencilColor), true);
-            lastPaintedBlock.put(player, b);
-            playItemSound(game, player, "item.pencil", SoundCompat.getSound("FIZZ"));
-            startPaintTask(player, game, false);
-            return;
-        }
-
-        if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
-            cancelPaintTask(player);
             Block b = rayTraceWool(player, 100);
             if (b == null || b.getType() != Material.WOOL) return;
             CuboidZone zone = game.getBuildZone();
             if (zone != null && !zone.contains(b)) return;
             byte data = DyeColorCompat.getData(pencilColor);
-            b.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            BlockFace face = event.getBlockFace();
-            Block h1, h2, v1, v2;
-            if (face == BlockFace.UP || face == BlockFace.DOWN) {
-                BlockFace dir = getPlayerFacing(player);
-                h1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
-                h2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
-                BlockFace perp = getPerpendicularFace(dir);
-                v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
-                v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
+            Block last = lastPaintedBlock.get(player);
+            if (last != null && !last.equals(b)) {
+                paintLine(last, b, data, zone, false, player);
             } else {
-                h1 = b.getRelative(BlockFace.UP);
-                h2 = b.getRelative(BlockFace.DOWN);
+                b.setTypeIdAndData(Material.WOOL.getId(), data, true);
+            }
+            lastPaintedBlock.put(player, b);
+            playPencilSound(player);
+            return;
+        }
+
+        if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            Block b = rayTraceWool(player, 100);
+            if (b == null || b.getType() != Material.WOOL) return;
+            CuboidZone zone = game.getBuildZone();
+            if (zone != null && !zone.contains(b)) return;
+            byte data = DyeColorCompat.getData(pencilColor);
+            Block last = lastPaintedBlock.get(player);
+            if (last != null && !last.equals(b)) {
+                paintLine(last, b, data, zone, true, player);
+            } else {
+                b.setTypeIdAndData(Material.WOOL.getId(), data, true);
                 BlockFace dir = getPlayerFacing(player);
-                if (face == dir || face == dir.getOppositeFace()) {
+                float pitch = player.getLocation().getPitch();
+                Block h1, h2, v1, v2;
+                if (pitch > 45 || pitch < -45) {
+                    h1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
+                    h2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
                     BlockFace perp = getPerpendicularFace(dir);
                     v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
                     v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
                 } else {
-                    v1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
-                    v2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
+                    h1 = b.getRelative(BlockFace.UP);
+                    h2 = b.getRelative(BlockFace.DOWN);
+                    BlockFace perp = getPerpendicularFace(dir);
+                    v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
+                    v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
                 }
+                if (zone == null || zone.contains(h1)) h1.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
             }
-            if (zone == null || zone.contains(h1)) h1.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
-            if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
             lastPaintedBlock.put(player, b);
-            playItemSound(game, player, "item.big-pencil", SoundCompat.getSound("FIZZ"));
-            startPaintTask(player, game, true);
+            playPencilSound(player);
             return;
         }
 
@@ -396,7 +397,7 @@ public class GameListener implements Listener {
                 ItemStack hand = player.getItemInHand();
                 if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
 
-                if (hand.getType().name().endsWith("_SWORD") && !player.isBlocking()) { cancelPaintTask(player); return; }
+                if (hand.getType().name().endsWith("_SWORD") && !isHandRaised(player)) { cancelPaintTask(player); return; }
                 Block b = rayTraceWool(player, 100);
                 if (b == null || b.getType() != Material.WOOL) return;
                 CuboidZone zone = game.getBuildZone();
@@ -506,6 +507,22 @@ public class GameListener implements Listener {
         if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
         if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
         if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
+    }
+
+    private boolean isHandRaised(Player player) {
+        try {
+            Object nmsEntity = player.getClass().getMethod("getHandle").invoke(player);
+            Class<?> clazz = nmsEntity.getClass();
+            while (clazz != null && !clazz.getSimpleName().equals("EntityHuman")) {
+                clazz = clazz.getSuperclass();
+            }
+            if (clazz != null) {
+                java.lang.reflect.Method m = clazz.getDeclaredMethod("isHandRaised");
+                m.setAccessible(true);
+                return (boolean) m.invoke(nmsEntity);
+            }
+        } catch (Exception e) {}
+        return true;
     }
 
     private void cancelPaintTask(Player player) {
