@@ -246,7 +246,6 @@ public class Game {
 
     public void leave(Player player) {
         if (!score.containsKey(player)) return;
-        if (!started && players == maxplayers) { cancelTasks(); waiting = false; countdownStartTime = 0; startRemainingSeconds = 0; lastStartTickTime = 0; }
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
