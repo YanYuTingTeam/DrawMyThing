@@ -4,6 +4,8 @@ import com.aermini.dmt.util.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.ItemManager;
 import com.aermini.dmt.cuboid.CuboidZone;
+import com.aermini.dmt.nms.NMSHandler;
+import com.aermini.dmt.nms.NMSHandlerFactory;
 import com.aermini.dmt.util.SoundCompat;
 import com.aermini.dmt.util.DyeColorCompat;
 import org.bukkit.*;
@@ -30,7 +32,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
-import java.lang.reflect.Method;
 
 public class GameListener implements Listener {
     private DyeColor pencilColor = DyeColor.BLACK;
@@ -510,18 +511,8 @@ public class GameListener implements Listener {
     }
 
     private boolean isHandRaised(Player player) {
-        try {
-            Object nmsEntity = player.getClass().getMethod("getHandle").invoke(player);
-            Class<?> clazz = nmsEntity.getClass();
-            while (clazz != null && !clazz.getSimpleName().equals("EntityHuman")) {
-                clazz = clazz.getSuperclass();
-            }
-            if (clazz != null) {
-                java.lang.reflect.Method m = clazz.getDeclaredMethod("isHandRaised");
-                m.setAccessible(true);
-                return (boolean) m.invoke(nmsEntity);
-            }
-        } catch (Exception e) {}
+        NMSHandler nms = NMSHandlerFactory.getHandler();
+        if (nms != null) return nms.isHandRaised(player);
         return true;
     }
 

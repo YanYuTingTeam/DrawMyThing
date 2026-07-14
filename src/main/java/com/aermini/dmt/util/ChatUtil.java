@@ -1,10 +1,11 @@
 package com.aermini.dmt.util;
 
 import com.aermini.dmt.DrawMyThing;
+import com.aermini.dmt.nms.NMSHandler;
+import com.aermini.dmt.nms.NMSHandlerFactory;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-import java.lang.reflect.Method;
 import java.util.List;
 
 public class ChatUtil {
@@ -74,88 +75,22 @@ public class ChatUtil {
         }
     }
 
-    private static String nmsVersion = null;
-
-    private static String getNmsVersion() {
-        if (nmsVersion == null) {
-            String name = org.bukkit.Bukkit.getServer().getClass().getPackage().getName();
-            nmsVersion = name.substring(name.lastIndexOf('.') + 1);
-        }
-        return nmsVersion;
-    }
-
-    private static Class<?> getNMSClass(String name) throws ClassNotFoundException {
-        return Class.forName("net.minecraft.server." + getNmsVersion() + "." + name);
-    }
-
     public static void sendTitle(Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
-        try {
-            Class<?> packetTitleClass = getNMSClass("PacketPlayOutTitle");
-            Class<?> enumTitleAction = getNMSClass("PacketPlayOutTitle$EnumTitleAction");
-            Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
-            Class<?> chatComponent = getNMSClass("IChatBaseComponent");
-
-            Object timingPacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent, int.class, int.class, int.class)
-                    .newInstance(enumTitleAction.getEnumConstants()[2], null, fadeIn, stay, fadeOut);
-            sendPacket(player, timingPacket);
-
-            if (title != null && !title.isEmpty()) {
-                Method aMethod = chatSerializer.getMethod("a", String.class);
-                Object titleComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(title) + "\"}");
-                Object titlePacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent)
-                        .newInstance(enumTitleAction.getEnumConstants()[0], titleComponent);
-                sendPacket(player, titlePacket);
-            }
-
-            if (subtitle != null && !subtitle.isEmpty()) {
-                Method aMethod = chatSerializer.getMethod("a", String.class);
-                Object subtitleComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(subtitle) + "\"}");
-                Object subtitlePacket = packetTitleClass.getConstructor(enumTitleAction, chatComponent)
-                        .newInstance(enumTitleAction.getEnumConstants()[1], subtitleComponent);
-                sendPacket(player, subtitlePacket);
-            }
-        } catch (Exception e) {
-            if (title != null && !title.isEmpty()) {
-                player.sendMessage(colorize(title));
-            }
-            if (subtitle != null && !subtitle.isEmpty()) {
-                player.sendMessage(colorize(subtitle));
-            }
+        NMSHandler nms = NMSHandlerFactory.getHandler();
+        if (nms != null) {
+            nms.sendTitle(player, colorize(title), colorize(subtitle), fadeIn, stay, fadeOut);
+        } else {
+            if (title != null && !title.isEmpty()) player.sendMessage(colorize(title));
+            if (subtitle != null && !subtitle.isEmpty()) player.sendMessage(colorize(subtitle));
         }
     }
 
     public static void sendActionBar(Player player, String message) {
-        try {
-            Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
-            Class<?> packetChatClass = getNMSClass("PacketPlayOutChat");
-
-            Method aMethod = chatSerializer.getMethod("a", String.class);
-            Object chatComponent = aMethod.invoke(null, "{\"text\":\"" + colorize(message) + "\"}");
-            Object packet;
-            try {
-                packet = packetChatClass.getConstructor(
-                    getNMSClass("IChatBaseComponent"), byte.class)
-                    .newInstance(chatComponent, (byte) 2);
-            } catch (NoSuchMethodException e) {
-                Class<?> chatMsgType = getNMSClass("ChatMessageType");
-                Object actionBar = null;
-                for (Object constant : chatMsgType.getEnumConstants()) {
-                    if (constant.toString().equals("GAME_INFO")) {actionBar=constant; break;}
-                }
-                packet = packetChatClass.getConstructor(getNMSClass("IChatBaseComponent"), chatMsgType)
-                    .newInstance(chatComponent, actionBar);
-            }
-
-            sendPacket(player, packet);
-        } catch (Exception e) {
+        NMSHandler nms = NMSHandlerFactory.getHandler();
+        if (nms != null) {
+            nms.sendActionBar(player, colorize(message));
+        } else {
             player.sendMessage(colorize(message));
         }
-    }
-
-    private static void sendPacket(Player player, Object packet) throws Exception {
-        Object handle = player.getClass().getMethod("getHandle").invoke(player);
-        Object playerConnection = handle.getClass().getField("playerConnection").get(handle);
-        playerConnection.getClass().getMethod("sendPacket", getNMSClass("Packet"))
-                .invoke(playerConnection, packet);
     }
 }
