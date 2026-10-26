@@ -202,6 +202,15 @@ public class GameListener implements Listener {
         if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player) event.getEntity();
         if (!isInGame(player)) return;
+        Game game = getGame(player);
+        if (game == null) return;
+        if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+            if (game.backToSpawn(player)) {
+                player.setFallDistance(0.0f);
+                event.setCancelled(true);
+            }
+            return;
+        }
         if (instance.getConfig().getBoolean("no-damage", true)) event.setCancelled(true);
     }
 
@@ -342,7 +351,7 @@ public class GameListener implements Listener {
             game.wordFoundBy(player);
         } else {
             String chatFormat = instance.getConfig().getString("chat.format", "&l%player%: &r%message%");
-            String chatMsg = ChatUtil.colorize(chatFormat.replace("%player%", player.getName()).replace("%message%", event.getMessage().toLowerCase()));
+            String chatMsg = ChatUtil.colorize(game.getMessenger().replacePlaceholders(chatFormat, player)).replace("%message%", event.getMessage().toLowerCase());
             game.sendMessage(chatMsg);
         }
     }

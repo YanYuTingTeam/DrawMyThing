@@ -428,9 +428,13 @@ public class Game {
         else if (len <= 6) maxHints = 2;
         else maxHints = 3;
         if (hintCount >= maxHints) return;
+        List<Integer> hidden = new ArrayList<Integer>();
+        for (int i = 0; i < len; i++) {
+            if (wordf.charAt(i) != word.charAt(i)) hidden.add(i);
+        }
+        if (hidden.isEmpty()) return;
         hintCount++;
-        Random r = new Random();
-        int idx = r.nextInt(word.length());
+        int idx = hidden.get(new Random().nextInt(hidden.size()));
         wordf.setCharAt(idx, word.charAt(idx));
     }
 
@@ -509,8 +513,9 @@ public class Game {
         int delay = instance.getConfig().getInt("game.builder-teleport-delay", 1);
         int freezeTime = instance.getConfig().getInt("game.builderToPlanter.time", 0);
         builderFreezeEndTime = freezeTime > 0 ? System.currentTimeMillis() + (delay + freezeTime) * 1000L : 0;
-        new BukkitRunnable() {
+        BukkitRunnable paintSetup = new BukkitRunnable() {
             public void run() {
+                if (!started || fp == null || !fp.isOnline() || !score.containsKey(fp) || !fp.equals(builder)) return;
                 if (bspawn != null) fp.teleport(bspawn);
                 fp.setGameMode(GameMode.SURVIVAL);
                 fp.setAllowFlight(true);
@@ -519,7 +524,9 @@ public class Game {
                 giveBuilderItems(fp);
                 fp.setDisplayName(ChatColor.RED + "[BUILDER] " + fp.getName());
             }
-        }.runTaskLater(instance, delay * 20L);
+        };
+        paintSetup.runTaskLater(instance, delay * 20L);
+        tasks.add(paintSetup);
         for (Player other : score.keySet()) {
             if (!other.equals(p)) {
                 giveWaitingItems(other);
@@ -623,8 +630,21 @@ public class Game {
     public void sendMessage(String message) { messenger.sendMessage(message); }
     public void sendMsg(String key, String... replacements) { messenger.sendMsg(key, replacements); }
 
+    public boolean backToSpawn(Player p) {
+        Location target;
+        if (!started) {
+            target = lobby != null ? lobby : spawn;
+        } else if (builder != null && builder.equals(p)) {
+            target = bspawn != null ? bspawn : (lobby != null ? lobby : spawn);
+        } else {
+            target = spawn != null ? spawn : (lobby != null ? lobby : bspawn);
+        }
+        if (target == null) return false;
+        return p.teleport(target);
+    }
+
     public void save(FileConfiguration file) { GameSerializer.save(this, file); }
-    public void remove(FileConfiguration file) { stop(); file.set("games." + getName(), null); }
+    public void remove(FileConfiguration file) { stop(); GameSerializer.remove(this, file); }
 
     public static Game load(FileConfiguration file, String name, DrawMyThing instance) { return GameSerializer.load(file, name, instance); }
     public static Game createEmpty(String name, World world, DrawMyThing instance) { return GameSerializer.createEmpty(name, world, instance); }

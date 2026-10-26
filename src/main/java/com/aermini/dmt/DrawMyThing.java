@@ -127,7 +127,7 @@ public class DrawMyThing extends JavaPlugin {
         if (gamesConfig.getConfigurationSection("games") == null) return;
         for (String name : gamesConfig.getConfigurationSection("games").getKeys(false)) {
             Game game = Game.load(gamesConfig, name, this);
-            if (game != null) { games.add(game); getLogger().info("Loaded game: " + name); }
+            if (game != null) { games.add(game); getLogger().info("Loaded game: " + game.getName()); }
         }
     }
 

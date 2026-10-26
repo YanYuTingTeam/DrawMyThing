@@ -9,8 +9,11 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 public class GameSerializer {
 
+    public static String safeKey(String name) { return name.replace('.', '_'); }
+
     public static void save(Game game, FileConfiguration file) {
-        String path = "games." + game.getName();
+        String path = "games." + safeKey(game.getName());
+        file.set(path + ".name", game.getName());
         file.set(path + ".region", game.getRegion());
         file.set(path + ".builderspawn", game.getBuilderSpawn() != null ? LocationUtil.LocationToString(game.getBuilderSpawn()) : "");
         file.set(path + ".spawn", game.getSpawn() != null ? LocationUtil.LocationToString(game.getSpawn()) : "");
@@ -27,9 +30,10 @@ public class GameSerializer {
         file.set(path + ".builder-boundary.pos2", game.getBuilderBoundaryPos2() != null ? LocationUtil.LocationToString(game.getBuilderBoundaryPos2()) : "");
     }
 
-    public static Game load(FileConfiguration file, String name, DrawMyThing instance) {
-        String path = "games." + name;
+    public static Game load(FileConfiguration file, String key, DrawMyThing instance) {
+        String path = "games." + safeKey(key);
         if (file.getString(path + ".region") == null) return null;
+        String name = file.getString(path + ".name", key);
         String region = file.getString(path + ".region", "world");
         Location spawn = LocationUtil.StringToLoc(file.getString(path + ".spawn", ""));
         Location bspawn = LocationUtil.StringToLoc(file.getString(path + ".builderspawn", ""));
@@ -54,6 +58,10 @@ public class GameSerializer {
         if (bbp1 != null && !bbp1.isEmpty()) game.setBuilderBoundaryPos1(LocationUtil.StringToLoc(bbp1));
         if (bbp2 != null && !bbp2.isEmpty()) game.setBuilderBoundaryPos2(LocationUtil.StringToLoc(bbp2));
         return game;
+    }
+
+    public static void remove(Game game, FileConfiguration file) {
+        file.set("games." + safeKey(game.getName()), null);
     }
 
     public static Game createEmpty(String name, World world, DrawMyThing instance) {

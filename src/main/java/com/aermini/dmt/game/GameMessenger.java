@@ -70,8 +70,7 @@ public class GameMessenger {
     }
 
     public void sendMessage(String message) {
-        String replaced = ChatUtil.colorize(replacePlaceholders(message, null));
-        for (Player p : game.getPlayers()) p.sendMessage(replaced);
+        for (Player p : game.getPlayers()) p.sendMessage(message);
     }
 
     public void sendMsg(String key, String... replacements) {
