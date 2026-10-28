@@ -4,8 +4,6 @@ import com.aermini.dmt.util.ChatUtil;
 import com.aermini.dmt.DrawMyThing;
 import com.aermini.dmt.ItemManager;
 import com.aermini.dmt.cuboid.CuboidZone;
-import com.aermini.dmt.nms.NMSHandler;
-import com.aermini.dmt.nms.NMSHandlerFactory;
 import com.aermini.dmt.util.SoundCompat;
 import com.aermini.dmt.util.DyeColorCompat;
 import org.bukkit.*;
@@ -40,6 +38,8 @@ public class GameListener implements Listener {
     private Map<Player, Block> lastPaintedBlock = new HashMap<Player, Block>();
     private Map<Player, Long> freezeSoundCooldown = new HashMap<Player, Long>();
     private Map<Player, Long> paintTaskStartTime = new HashMap<Player, Long>();
+    private Map<Player, Long> lastPaintPacketAt = new HashMap<Player, Long>();
+    private static final long PAINT_PACKET_TIMEOUT = 300L;
 
     public GameListener(DrawMyThing instance) {
         this.instance = instance;
@@ -262,56 +262,41 @@ public class GameListener implements Listener {
         }
 
         if (isPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            startPaintTask(player, game, false);
+            lastPaintPacketAt.put(player, System.currentTimeMillis());
             Block b = rayTraceWool(player, 100);
-            if (b == null || b.getType() != Material.WOOL) return;
+            if (b == null || b.getType() != Material.WOOL) { lastPaintedBlock.remove(player); return; }
             CuboidZone zone = game.getBuildZone();
-            if (zone != null && !zone.contains(b)) return;
+            if (zone != null && !zone.contains(b)) { lastPaintedBlock.remove(player); return; }
             byte data = DyeColorCompat.getData(pencilColor);
             Block last = lastPaintedBlock.get(player);
-            if (last != null && !last.equals(b)) {
-                paintLine(last, b, data, zone, false, player);
-            } else {
+            if (last == null) {
                 b.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                playPencilSound(player);
+            } else if (!last.equals(b)) {
+                paintLine(last, b, data, zone, false, player);
             }
             lastPaintedBlock.put(player, b);
-            playPencilSound(player);
             return;
         }
 
         if (isBigPencilItem(item) && (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)) {
+            startPaintTask(player, game, true);
+            lastPaintPacketAt.put(player, System.currentTimeMillis());
             Block b = rayTraceWool(player, 100);
-            if (b == null || b.getType() != Material.WOOL) return;
+            if (b == null || b.getType() != Material.WOOL) { lastPaintedBlock.remove(player); return; }
             CuboidZone zone = game.getBuildZone();
-            if (zone != null && !zone.contains(b)) return;
+            if (zone != null && !zone.contains(b)) { lastPaintedBlock.remove(player); return; }
             byte data = DyeColorCompat.getData(pencilColor);
             Block last = lastPaintedBlock.get(player);
-            if (last != null && !last.equals(b)) {
-                paintLine(last, b, data, zone, true, player);
-            } else {
+            if (last == null) {
                 b.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                BlockFace dir = getPlayerFacing(player);
-                float pitch = player.getLocation().getPitch();
-                Block h1, h2, v1, v2;
-                if (pitch > 45 || pitch < -45) {
-                    h1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
-                    h2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
-                    BlockFace perp = getPerpendicularFace(dir);
-                    v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
-                    v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
-                } else {
-                    h1 = b.getRelative(BlockFace.UP);
-                    h2 = b.getRelative(BlockFace.DOWN);
-                    BlockFace perp = getPerpendicularFace(dir);
-                    v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
-                    v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
-                }
-                if (zone == null || zone.contains(h1)) h1.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
+                paintBigNeighbors(b, data, zone, getPlayerFacing(player), player.getLocation().getPitch());
+                playPencilSound(player);
+            } else if (!last.equals(b)) {
+                paintLine(last, b, data, zone, true, player);
             }
             lastPaintedBlock.put(player, b);
-            playPencilSound(player);
             return;
         }
 
@@ -401,46 +386,32 @@ public class GameListener implements Listener {
     }
 
     private void startPaintTask(final Player player, final Game game, final boolean big) {
+        if (paintTasks.containsKey(player)) return;
+        final boolean[] blockingSeen = { false };
+        final long[] lastSoundAt = { 0L };
         BukkitTask task = new BukkitRunnable() {
             public void run() {
                 if (!player.isOnline() || !isInGame(player)) { cancelPaintTask(player); return; }
                 ItemStack hand = player.getItemInHand();
                 if (hand == null || (!isPencilItem(hand) && !isBigPencilItem(hand))) { cancelPaintTask(player); return; }
 
-                if (hand.getType().name().endsWith("_SWORD") && !isHandRaised(player)) { cancelPaintTask(player); return; }
+                long now = System.currentTimeMillis();
+                boolean blocking = player.isBlocking();
+                if (blocking) blockingSeen[0] = true;
+                Long lastPacket = lastPaintPacketAt.get(player);
+                if (!blocking && (blockingSeen[0] || lastPacket == null || now - lastPacket > PAINT_PACKET_TIMEOUT)) { cancelPaintTask(player); return; }
                 Block b = rayTraceWool(player, 100);
-                if (b == null || b.getType() != Material.WOOL) return;
+                if (b == null || b.getType() != Material.WOOL) { lastPaintedBlock.remove(player); return; }
                 CuboidZone zone = game.getBuildZone();
                 if (zone != null && !zone.contains(b)) return;
                 byte data = DyeColorCompat.getData(pencilColor);
                 Block last = lastPaintedBlock.get(player);
-                if (last != null && !last.equals(b)) {
-                    paintLine(last, b, data, zone, big, player);
-                    playPencilSound(player);
-                } else {
+                if (last == null) {
                     b.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                    if (big) {
-                        BlockFace dir = getPlayerFacing(player);
-                        float pitch = player.getLocation().getPitch();
-                        Block h1, h2, v1, v2;
-                        if (pitch > 45 || pitch < -45) {
-                            h1 = b.getRelative(dir.getModX(), 0, dir.getModZ());
-                            h2 = b.getRelative(-dir.getModX(), 0, -dir.getModZ());
-                            BlockFace perp = getPerpendicularFace(dir);
-                            v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
-                            v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
-                        } else {
-                            h1 = b.getRelative(BlockFace.UP);
-                            h2 = b.getRelative(BlockFace.DOWN);
-                            BlockFace perp = getPerpendicularFace(dir);
-                            v1 = b.getRelative(perp.getModX(), 0, perp.getModZ());
-                            v2 = b.getRelative(-perp.getModX(), 0, -perp.getModZ());
-                        }
-                        if (zone == null || zone.contains(h1)) h1.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                        if (zone == null || zone.contains(h2)) h2.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                        if (zone == null || zone.contains(v1)) v1.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                        if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
-                    }
+                    if (big) paintBigNeighbors(b, data, zone, getPlayerFacing(player), player.getLocation().getPitch());
+                } else if (!last.equals(b)) {
+                    paintLine(last, b, data, zone, big, player);
+                    if (now - lastSoundAt[0] >= 200L) { playPencilSound(player); lastSoundAt[0] = now; }
                 }
                 lastPaintedBlock.put(player, b);
             }
@@ -519,17 +490,12 @@ public class GameListener implements Listener {
         if (zone == null || zone.contains(v2)) v2.setTypeIdAndData(Material.WOOL.getId(), data, true);
     }
 
-    private boolean isHandRaised(Player player) {
-        NMSHandler nms = NMSHandlerFactory.getHandler();
-        if (nms != null) return nms.isHandRaised(player);
-        return true;
-    }
-
     private void cancelPaintTask(Player player) {
         BukkitTask task = paintTasks.remove(player);
         if (task != null) task.cancel();
         lastPaintedBlock.remove(player);
         paintTaskStartTime.remove(player);
+        lastPaintPacketAt.remove(player);
     }
 
     public void stopPlayerPaintTask(Player player) {
@@ -541,6 +507,7 @@ public class GameListener implements Listener {
         lastPaintedBlock.clear();
         freezeSoundCooldown.clear();
         paintTaskStartTime.clear();
+        lastPaintPacketAt.clear();
     }
 
     private boolean matchItem(ItemStack item, String configPath, Material defaultMat, short defaultData) {
