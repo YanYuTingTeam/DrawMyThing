@@ -29,7 +29,7 @@ public class GameMessenger {
         result = result.replace("%starttime%", String.valueOf(game.getStartTime()));
         result = result.replace("%endtime%", String.valueOf(game.getEndTime()));
         result = result.replace("%round_now%", String.valueOf(game.getRoundCount()));
-        result = result.replace("%round_all%", String.valueOf(game.getRound() * game.getScoreMap().size()));
+        result = result.replace("%round_all%", String.valueOf(game.getTotalRounds()));
         if (game.getBuilder() != null) {
             result = result.replace("%builder_player%", game.getBuilder().getName());
         } else if (game.getRoundBuilderName() != null) {

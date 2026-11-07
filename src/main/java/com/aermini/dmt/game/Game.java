@@ -43,6 +43,7 @@ public class Game {
     private int maxplayers = 12;
     private int round = 2;
     private int roundCount = 0;
+    private int totalRounds = 0;
     private String word;
     private StringBuilder wordf;
     private boolean started = false;
@@ -95,6 +96,7 @@ public class Game {
     public Location getLobby() { return lobby; }
     public int getRound() { return round; }
     public int getRoundCount() { return roundCount; }
+    public int getTotalRounds() { return started ? totalRounds : round * Math.max(players, score.size()); }
     public StringBuilder getWordFormatted() { return wordf; }
     public Map<Player, Integer> getRoundGainedScore() { return roundGainedScore; }
 
@@ -246,6 +248,8 @@ public class Game {
 
     public void leave(Player player) {
         if (!score.containsKey(player)) return;
+        Integer cnt = hasBeenBuilder.get(player);
+        if (started) totalRounds -= Math.max(round - (cnt != null ? cnt : 0), 0);
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
@@ -279,7 +283,7 @@ public class Game {
             cancelTasks();
             timesUp(true);
             int nextRoundTime = instance.getConfig().getInt("game.nextroundTime", 5);
-            if (players <= 1 || roundCount >= round * players) {
+            if (players <= 1 || roundCount >= getTotalRounds()) {
                 nextRoundEndTime = System.currentTimeMillis() + nextRoundTime * 1000L;
                 roundEndTime = 0;
                 List<Player> sorted = new ArrayList<Player>(score.keySet());
@@ -346,6 +350,7 @@ public class Game {
         round = instance.getConfig().getInt("game.round", 2);
         if (players < 3) round = Math.max(round, 3);
         roundCount = 0;
+        totalRounds = round * players;
         usedWordGroups.clear();
         hasBeenBuilder.clear();
         for (Player p : score.keySet()) hasBeenBuilder.put(p, 0);
