@@ -345,8 +345,10 @@ public class DMTCommandHandler implements org.bukkit.event.Listener {
 
     private void sendHelp(Player player) {
         player.sendMessage(ChatUtil.colorize("&e&lDrawMyThing &r&7for &b&lYanYuTing"));
+        player.sendMessage(ChatUtil.colorize("&dhttps://github.com/YanYuTingTeam/DrawMyThing"));
         player.sendMessage(ChatUtil.colorize("&fAuthors: "));
         player.sendMessage(ChatUtil.colorize("&bShadowUniverse &8| &dhttps://github.com/ShadowUniverse"));
+        player.sendMessage(ChatUtil.colorize("&7Rewritten by: "));
         player.sendMessage(ChatUtil.colorize("&bAerMini &8| &dhttps://github.com/AerMini2024"));
         player.sendMessage(ChatUtil.colorize("&dYukiEnd &8| &dhttps://github.com/LinMoyuu"));
         if (player.hasPermission("dmt.admin")) {
