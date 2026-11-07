@@ -249,7 +249,7 @@ public class Game {
     public void leave(Player player) {
         if (!score.containsKey(player)) return;
         Integer cnt = hasBeenBuilder.get(player);
-        if (started) totalRounds -= Math.max(round - (cnt != null ? cnt : 0), 0);
+        if (started && !aftergameRunning) totalRounds = Math.max(totalRounds - Math.max(round - (cnt != null ? cnt : 0), 0), roundCount);
         player.setFoodLevel(foodLevel.containsKey(player) ? foodLevel.get(player) : 20);
         foodLevel.remove(player);
         score.remove(player);
